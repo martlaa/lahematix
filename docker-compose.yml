@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lahematix
+      POSTGRES_PASSWORD: lahematix_dev_pw
+      POSTGRES_DB: lahematix
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432' # kohalikuks arenduseks; VPS-il võib selle rea eemaldada, kui
+                      # rakendus jookseb samas Docker võrgus (turvalisem)
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://lahematix:lahematix_dev_pw@db:5432/lahematix?schema=public
+    ports:
+      - '3000:3000'
+    volumes:
+      - uploads:/app/uploads # Faasis 2 lisanduvad testipiltide/failide jaoks
+
+volumes:
+  db_data:
+  uploads:
