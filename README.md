@@ -4,11 +4,10 @@ See on LAHEMATE projekti uuringurakenduse **Faas 1** lähtekood: koolide/kasutaj
 kõik neli nõusolekuvormi (koolijuht, õpetaja, lapsevanem, 15+ õpilane), nõusoleku
 tagasivõtmine ja lihtne jälgimisvaade teadurile.
 
-**Oluline:** autentimine kasutab praegu ajutist "DEV_LOGIN" lahendust (ainult e-post,
-ilma paroolita) — see EI OLE lõplik ega turvaline lahendus, vaid koht, kuhu HarID
-hiljem sisse pistetakse. Kogu ülejäänud rakendus (sessioon, õigused, andmemudel) jääb
-HarID lisamisel samaks — muutub ainult fail `src/lib/session.ts` ja
-`src/app/api/auth/login/route.ts`.
+**Autentimine (versioon 3):** HarID/MobiilID/SmartID-st loobuti kolleegide soovitusel —
+sisselogimine käib e-posti-põhise ühekordse lingiga (magic link, kehtib 15 min, vt
+`src/app/api/auth/login/route.ts` ja `src/app/api/auth/verify/route.ts`). See on
+rakenduse püsiv, mitte ajutine lahendus.
 
 ---
 
@@ -63,7 +62,7 @@ Logi sisse e-postiga `admin@lahemate.ee` (see luuakse seed-skriptiga).
 
 ---
 
-## 2. Esmaspäeval/teisipäeval — üleminek VPS-ile ja HarID-le
+## 2. Esmaspäeval/teisipäeval — üleminek VPS-ile
 
 ### 2.1. VPS-ile (lahemate.ee) paigaldamine
 ```bash
@@ -81,13 +80,8 @@ Selle järel jookseb rakendus pordil 3000 — vajad veel Nginx reverse proxy't j
 Let's Encrypt SSL-sertifikaati domeeni jaoks (nt `lahematix.lahemate.ee`). Sellega
 saan Sind aidata järgmises Claude Code sessioonis, kui VPS ligipääs on olemas.
 
-### 2.2. HarID sisse ühendamine
-Kui kolleegid annavad HarID SAML tehnilised andmed (IdP metadata URL, sertifikaat,
-atribuutide kaardistus), asendame:
-- `src/lib/session.ts` — lisandub HarID provider
-- `src/app/api/auth/login/route.ts` — asendub SAML callback route'iga
-- Kõik teised failid (dashboardid, vormid, andmemudel) **jäävad muutmata**, kuna nad
-  kasutavad ainult `getSession()` funktsiooni, mitte otse DEV_LOGIN loogikat.
+Autentimine (e-posti-põhine magic link) on juba püsiv lahendus — HarID-integratsiooni
+enam ei plaanita (vt `LAHEMATIX_arendusnouded_ja_plaan.md`, versioon 3).
 
 ---
 
@@ -97,7 +91,9 @@ atribuutide kaardistus), asendame:
 prisma/schema.prisma       — andmemudel (Faas 1: User, School, Teacher, Student,
                               Parent, ConsentRecord, InviteToken, AuditLog)
 prisma/seed.ts              — loob esimese admin-kasutaja
-src/lib/session.ts          — sessioonihaldus (ajutine DEV_LOGIN, hiljem HarID)
+src/lib/session.ts          — sessioonihaldus (iron-session)
+src/app/api/auth/login/     — magic-link väljastamine (e-posti saatmine)
+src/app/api/auth/verify/    — magic-link kontroll ja sessiooni loomine
 src/lib/prisma.ts           — andmebaasiühenduse singleton
 src/lib/mail.ts             — e-kirjade saatmine (zone.ee SMTP)
 src/lib/pseudonym.ts        — õpilaste pseudonüümikoodide genereerimine

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         subjectId: session.userId,
         formVersion: 'v1',
         status: 'ANTUD',
-        authMethod: 'DEV_LOGIN',
+        authMethod: 'EMAIL_LINK',
       },
     });
   } else if (action === 'withdraw') {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         formVersion: 'v1',
         status: 'TAGASI_VOETUD',
         withdrawnAt: new Date(),
-        authMethod: 'DEV_LOGIN',
+        authMethod: 'EMAIL_LINK',
       },
     });
   }

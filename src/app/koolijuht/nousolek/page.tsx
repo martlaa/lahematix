@@ -2,7 +2,8 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { FormShell, Alert, PrimaryButton } from '@/components/ui';
+import { FormShell, Alert, PrimaryButton, SecondaryLinkButton } from '@/components/ui';
+import { KoolijuhtConsentInfo } from '@/components/consentTexts';
 
 export default async function KoolijuhtNousolekPage() {
   const session = await getSession();
@@ -31,7 +32,7 @@ export default async function KoolijuhtNousolekPage() {
       <Header userLabel={`${session.name} (koolijuht)`} />
       <FormShell
         title={`Nõusolek: ${school.name}`}
-        subtitle="LAHEMATE projekt — infokiri ja nõusolekuvorm koolijuhile"
+        subtitle="LAHEMATE projekt — infokiri ja nõusolekuvorm koolijuhile (Lisa 1)"
       >
         {school.consentGiven ? (
           <Alert kind="success">
@@ -42,16 +43,8 @@ export default async function KoolijuhtNousolekPage() {
           <Alert kind="info">Nõusolekut ei ole veel antud.</Alert>
         )}
 
-        <div className="prose prose-sm max-w-none text-slate-700 mb-6">
-          <p>
-            Tallinna Ülikool ja Tartu Ülikool viivad Haridus- ja Teadusministeeriumi tellimusel ning
-            HARTA-LTM2 meetme toel aastatel 2025–2027 läbi arendusuuringut &bdquo;LAHEMATE: õppijakeskse
-            matemaatilise probleemilahenduse õppemetoodika arendusuuring&ldquo;.
-          </p>
-          <p>
-            Palume Teie nõusolekut, et Teie koolis võiksid osaleda need matemaatikaõpetajad, kes on
-            avaldanud soovi uuringus osaleda. Täpne infokiri on lisatud käesolevale taotlusele (Lisa 1).
-          </p>
+        <div className="prose prose-sm max-w-none text-slate-700 mb-6 space-y-4">
+          <KoolijuhtConsentInfo />
         </div>
 
         <h3 className="font-medium text-slate-900 mb-2">Kooli õpetajad-uurijad</h3>
@@ -70,19 +63,24 @@ export default async function KoolijuhtNousolekPage() {
             <label className="flex items-start gap-2 mb-4 text-sm text-slate-800">
               <input type="checkbox" required className="mt-1 h-4 w-4 rounded border-slate-300" />
               <span>
-                Kinnitan, et olen tutvunud uuringu eesmärgi, käigu ja andmekaitsepõhimõtetega ning annan
-                nõusoleku, et meie koolis võivad osaleda eespool loetletud õpetajad koos oma õpilastega.
+                Kinnitan, et olen tutvunud eespool kirjeldatud uuringu eesmärgi, käigu ja
+                andmekaitsepõhimõtetega ning annan nõusoleku, et meie koolis võivad osaleda need
+                matemaatikaõpetajad, kes on ise selleks soovi avaldanud, koos oma õpilastega (nii katse-
+                kui vajadusel võrdlusrühmas).
               </span>
             </label>
             <PrimaryButton type="submit">Kinnita nõusolek</PrimaryButton>
           </form>
         ) : (
-          <form action="/api/consent/koolijuht" method="post">
-            <input type="hidden" name="action" value="withdraw" />
-            <button type="submit" className="text-sm text-red-600 underline hover:no-underline">
-              Võta nõusolek tagasi
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <form action="/api/consent/koolijuht" method="post">
+              <input type="hidden" name="action" value="withdraw" />
+              <button type="submit" className="text-sm text-red-600 underline hover:no-underline">
+                Võta nõusolek tagasi
+              </button>
+            </form>
+            <SecondaryLinkButton href="/koolijuht/nousolek/kinnitus">Laadi nõusolekuvorm alla</SecondaryLinkButton>
+          </div>
         )}
       </FormShell>
     </>

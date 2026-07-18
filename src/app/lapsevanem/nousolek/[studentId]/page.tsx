@@ -2,7 +2,8 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { FormShell, Alert, Checkbox, PrimaryButton } from '@/components/ui';
+import { FormShell, Alert, Checkbox, PrimaryButton, SecondaryLinkButton } from '@/components/ui';
+import { LapsevanemConsentInfo } from '@/components/consentTexts';
 
 export default async function LapsevanemNousolekPage({ params }: { params: { studentId: string } }) {
   const session = await getSession();
@@ -34,16 +35,8 @@ export default async function LapsevanemNousolekPage({ params }: { params: { stu
           </Alert>
         )}
 
-        <div className="prose prose-sm max-w-none text-slate-700 mb-6">
-          <p>
-            Teie lapse matemaatikaõpetaja osaleb vabatahtlikult LAHEMATE uuringus. Osalemine tähendab
-            probleemilahendusoskuse testi täitmist kaks korda ning veebipõhist küsimustikku pärast
-            katseperioodi lõppu. Täpne infoleht on lisatud käesolevale taotlusele (Lisa 3).
-          </p>
-          <p>
-            Osalemine on vabatahtlik ega mõjuta lapse hindeid ega suhet õpetajaga. Nõusoleku võib igal
-            ajal tagasi võtta.
-          </p>
+        <div className="prose prose-sm max-w-none text-slate-700 mb-6 space-y-4">
+          <LapsevanemConsentInfo />
         </div>
 
         {!hasConsent ? (
@@ -58,20 +51,25 @@ export default async function LapsevanemNousolekPage({ params }: { params: { stu
             <Checkbox
               name="lapseleTutvustatud"
               required
-              label="Lapsele on uuringut talle arusaadavalt tutvustatud ja laps on suuliselt kinnitanud, et on nõus osalema."
+              label="Lapsele on uuringut talle arusaadavalt tutvustatud eespool oleva selgituse abil ja laps on suuliselt kinnitanud, et on nõus osalema."
             />
             <div className="mt-6">
               <PrimaryButton type="submit">Kinnita nõusolek</PrimaryButton>
             </div>
           </form>
         ) : (
-          <form action="/api/consent/lapsevanem" method="post">
-            <input type="hidden" name="studentId" value={student.id} />
-            <input type="hidden" name="action" value="withdraw" />
-            <button type="submit" className="text-sm text-red-600 underline hover:no-underline">
-              Võta nõusolek tagasi
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <form action="/api/consent/lapsevanem" method="post">
+              <input type="hidden" name="studentId" value={student.id} />
+              <input type="hidden" name="action" value="withdraw" />
+              <button type="submit" className="text-sm text-red-600 underline hover:no-underline">
+                Võta nõusolek tagasi
+              </button>
+            </form>
+            <SecondaryLinkButton href={`/lapsevanem/nousolek/${student.id}/kinnitus`}>
+              Laadi nõusolekuvorm alla
+            </SecondaryLinkButton>
+          </div>
         )}
       </FormShell>
     </>

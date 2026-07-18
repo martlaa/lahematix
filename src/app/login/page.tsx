@@ -1,22 +1,25 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { FormShell, Field, TextInput, PrimaryButton, Alert } from '@/components/ui';
 
-const roleRedirect: Record<string, string> = {
-  ADMIN: '/admin',
-  TEADUR: '/teadur',
-  OPETAJA: '/opetaja',
-  KOOLIJUHT: '/koolijuht/nousolek',
-  LAPSEVANEM: '/lapsevanem',
-};
-
 export default function LoginPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const tokenError = searchParams.get('error') === 'invalid_token';
+
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,14 +36,30 @@ export default function LoginPage() {
       setError(data.error ?? 'Sisselogimine ebaõnnestus.');
       return;
     }
-    router.push(roleRedirect[data.role] ?? '/');
+    setSentTo(email);
+  }
+
+  if (sentTo) {
+    return (
+      <FormShell title="Kontrolli oma e-posti" subtitle="Saatsime Sulle ühekordse sisselogimislingi.">
+        <Alert kind="success">
+          Saatsime sisselogimislingi aadressile <strong>{sentTo}</strong>. Link kehtib 15 minutit ja
+          töötab ainult üks kord — ava see samas brauseris, kust soovid sisse logida.
+        </Alert>
+      </FormShell>
+    );
   }
 
   return (
     <FormShell
       title="Logi sisse"
-      subtitle="Ajutine e-posti-põhine sisselogimine (HarID lisandub hilisemas arendusfaasis)."
+      subtitle="Sisesta oma e-post — saadame Sulle ühekordse sisselogimislingi."
     >
+      {tokenError && (
+        <Alert kind="error">
+          Link on aegunud, juba kasutatud või vale. Palun sisesta oma e-post uuesti, et saada uus link.
+        </Alert>
+      )}
       {error && <Alert kind="error">{error}</Alert>}
       <form onSubmit={onSubmit}>
         <Field label="E-post" hint="Sisesta e-post, millega projekti meeskond Su kutsus.">
@@ -53,7 +72,7 @@ export default function LoginPage() {
           />
         </Field>
         <PrimaryButton type="submit" disabled={loading}>
-          {loading ? 'Login sisse…' : 'Logi sisse'}
+          {loading ? 'Saadan linki…' : 'Saada sisselogimislink'}
         </PrimaryButton>
       </form>
     </FormShell>

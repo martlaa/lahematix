@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         subjectId: session.userId,
         formVersion: 'v1',
         status: 'ANTUD',
-        authMethod: 'DEV_LOGIN',
+        authMethod: 'EMAIL_LINK',
         detailsJson: JSON.stringify(details),
       },
     });
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         formVersion: 'v1',
         status: 'TAGASI_VOETUD',
         withdrawnAt: new Date(),
-        authMethod: 'DEV_LOGIN',
+        authMethod: 'EMAIL_LINK',
       },
     });
     // Kõik selle õpetaja õpilased märgitakse analüüsist väljajäetuks (otsus 9).

@@ -36,3 +36,13 @@ export function inviteEmailHtml(params: { name: string; link: string; roleLabel:
     <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
   `;
 }
+
+export function magicLinkEmailHtml(params: { name: string; link: string }) {
+  return `
+    <p>Tere, ${params.name}!</p>
+    <p>Siin on Su ühekordne sisselogimislink LAHEMATE uuringurakendusse:</p>
+    <p><a href="${params.link}">Logi sisse</a></p>
+    <p>Link kehtib 15 minutit ja töötab ainult üks kord. Kui Sa seda ei küsinud, võid selle e-kirja ignoreerida.</p>
+    <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
+  `;
+}

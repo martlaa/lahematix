@@ -2,8 +2,13 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
+import { Alert } from '@/components/ui';
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: { imported?: string; errors?: string };
+}) {
   const session = await getSession();
   if (!session.userId || session.role !== 'ADMIN') redirect('/login');
 
@@ -13,10 +18,35 @@ export default async function AdminPage() {
   });
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
 
+  const teacherOptions = schools.flatMap((s) => s.teachers.map((t) => ({ id: t.id, label: `${t.user.name} (${s.name})` })));
+
+  const imported = searchParams.imported ? Number(searchParams.imported) : null;
+  const importErrors: { row: number; message: string }[] = searchParams.errors
+    ? JSON.parse(searchParams.errors)
+    : [];
+
   return (
     <>
       <Header userLabel={`${session.name} (admin)`} />
       <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-8">
+        {imported !== null && (
+          <Alert kind={importErrors.length > 0 ? 'info' : 'success'}>
+            <p>{imported} õpilast lisati edukalt CSV-failist.</p>
+            {importErrors.length > 0 && (
+              <>
+                <p className="mt-2 font-medium">{importErrors.length} rida ei õnnestunud:</p>
+                <ul className="list-disc list-inside">
+                  {importErrors.map((e, i) => (
+                    <li key={i}>
+                      Rida {e.row}: {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </Alert>
+        )}
+
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Uus kool</h2>
           <form action="/api/admin/schools" method="post" className="flex gap-3">
@@ -69,6 +99,47 @@ export default async function AdminPage() {
               Saada kutse
             </button>
           </form>
+        </section>
+
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h2 className="font-semibold text-slate-900 mb-2">Lisa õpilasi õpetaja eest (CSV)</h2>
+          <p className="text-sm text-slate-600 mb-3">
+            Kasuta seda, kui õpetajal endal pole mugav CSV-faili üles laadida — täida nimekiri tema klassi
+            õpilastega ise ja vali allpool, millisele õpetajale need lisatakse.{' '}
+            <a href="/naidis_opilased.csv" download className="text-brand-600 underline hover:no-underline">
+              Laadi alla näidis-CSV
+            </a>
+            .
+          </p>
+          {teacherOptions.length === 0 ? (
+            <p className="text-sm text-slate-400">Ühtegi õpetajat pole veel lisatud.</p>
+          ) : (
+            <form
+              action="/api/admin/opilased/csv"
+              method="post"
+              encType="multipart/form-data"
+              className="flex flex-wrap items-center gap-3"
+            >
+              <select name="teacherId" required className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <option value="">— vali õpetaja —</option>
+                {teacherOptions.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="file"
+                name="file"
+                accept=".csv,text/csv"
+                required
+                className="text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200"
+              />
+              <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                Impordi CSV-st
+              </button>
+            </form>
+          )}
         </section>
 
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

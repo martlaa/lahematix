@@ -74,6 +74,25 @@ export function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElemen
   );
 }
 
+export function SecondaryLinkButton({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+    >
+      {children}
+    </a>
+  );
+}
+
 export function Alert({ kind, children }: { kind: 'success' | 'error' | 'info'; children: React.ReactNode }) {
   const styles = {
     success: 'bg-green-50 text-green-800 border-green-200',

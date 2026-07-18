@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { nanoid } from 'nanoid';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { sendMail, magicLinkEmailHtml } from '@/lib/mail';
 
-// AJUTINE (Faas 1): kasutaja saab sisse logida ainult oma e-postiga,
-// ilma paroolita. See EI OLE turvaline lõplik lahendus — see on
-// asendatav HarID SAML-vooga Faasis 5, ilma et ülejäänud rakendust
-// peaks muutma (sessioon jääb samaks, muutub ainult see fail).
-//
-// Praktikas: admin loob kasutajad ette (vt /admin), seega DEV_LOGIN
-// lubab sisse ainult juba andmebaasis oleva e-postiga.
+// E-posti-põhine autentimine, versioon 3 (magic link — vt
+// LAHEMATIX_arendusnouded_ja_plaan.md punkt 4). Kasutaja sisestab e-posti,
+// saab ühekordse 15 min kehtiva lingi, kliki lingile loob sessiooni
+// (vt /api/auth/verify). Admin loob kasutajad ette (vt /admin), seega see
+// endpoint lubab linki saata ainult juba andmebaasis oleva e-postiga.
+
+const TOKEN_TTL_MS = 15 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json();
@@ -26,16 +27,37 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const session = await getSession();
-  session.userId = user.id;
-  session.role = user.role;
-  session.email = user.email;
-  session.name = user.name;
-  await session.save();
+  // Varasemad kasutamata lingid muutuvad kehtetuks, et korraga kehtiks alati üks link.
+  await prisma.loginToken.deleteMany({ where: { userId: user.id, usedAt: null } });
 
-  if (user.status === 'INVITED') {
-    await prisma.user.update({ where: { id: user.id }, data: { status: 'ACTIVE' } });
+  const token = nanoid(32);
+  await prisma.loginToken.create({
+    data: {
+      token,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
+    },
+  });
+
+  const link = `${process.env.APP_BASE_URL}/api/auth/verify?token=${token}`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    // Kohalikus arenduses, kui SMTP pole seadistatud, saab lingi siit konsoolist kopeerida.
+    console.log(`[DEV] Sisselogimislink kasutajale ${user.email}: ${link}`);
   }
 
-  return NextResponse.json({ ok: true, role: user.role });
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'LAHEMATIX sisselogimislink',
+      html: magicLinkEmailHtml({ name: user.name, link }),
+    });
+  } catch (err) {
+    console.error('Sisselogimislingi saatmine ebaõnnestus:', err);
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'E-kirja saatmine ebaõnnestus. Palun proovi hiljem uuesti.' }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({ ok: true });
 }

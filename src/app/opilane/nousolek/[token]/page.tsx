@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
-import { FormShell, Alert, Checkbox, TextInput, Field, PrimaryButton } from '@/components/ui';
+import { FormShell, Alert, Checkbox, TextInput, Field, PrimaryButton, SecondaryLinkButton } from '@/components/ui';
+import { OpilaneConsentInfo } from '@/components/consentTexts';
 
 export default async function OpilaneNousolekPage({ params }: { params: { token: string } }) {
   const invite = await prisma.inviteToken.findUnique({
@@ -24,16 +25,8 @@ export default async function OpilaneNousolekPage({ params }: { params: { token:
       {hasConsent ? (
         <Alert kind="success">Oled juba andnud nõusoleku {latest?.givenAt.toLocaleDateString('et-EE')}.</Alert>
       ) : (
-        <div className="prose prose-sm max-w-none text-slate-700 mb-6">
-          <p>
-            Tallinna Ülikool ja Tartu Ülikool viivad läbi uuringut LAHEMATE. Osalemine tähendab
-            probleemilahendusoskuse testi täitmist kaks korda ning veebipõhist küsimustikku pärast
-            katseperioodi lõppu. Testid ja küsimustik ei ole hinde peale.
-          </p>
-          <p>
-            Kuna oled 15-aastane või vanem, saad selle nõusoleku anda iseseisvalt, ilma lapsevanema
-            allkirjata. Täpne infoleht on lisatud käesolevale taotlusele (Lisa 3b).
-          </p>
+        <div className="prose prose-sm max-w-none text-slate-700 mb-6 space-y-4">
+          <OpilaneConsentInfo />
         </div>
       )}
 
@@ -62,13 +55,18 @@ export default async function OpilaneNousolekPage({ params }: { params: { token:
       )}
 
       {hasConsent && (
-        <form action="/api/consent/opilane" method="post">
-          <input type="hidden" name="token" value={invite.token} />
-          <input type="hidden" name="action" value="withdraw" />
-          <button type="submit" className="text-sm text-red-600 underline hover:no-underline">
-            Võta nõusolek tagasi
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+          <form action="/api/consent/opilane" method="post">
+            <input type="hidden" name="token" value={invite.token} />
+            <input type="hidden" name="action" value="withdraw" />
+            <button type="submit" className="text-sm text-red-600 underline hover:no-underline">
+              Võta nõusolek tagasi
+            </button>
+          </form>
+          <SecondaryLinkButton href={`/opilane/nousolek/${invite.token}/kinnitus`}>
+            Laadi nõusolekuvorm alla
+          </SecondaryLinkButton>
+        </div>
       )}
     </FormShell>
   );

@@ -2,7 +2,8 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { FormShell, Alert, Checkbox, PrimaryButton } from '@/components/ui';
+import { FormShell, Alert, Checkbox, PrimaryButton, SecondaryLinkButton } from '@/components/ui';
+import { OpetajaConsentInfo } from '@/components/consentTexts';
 
 export default async function OpetajaNousolekPage() {
   const session = await getSession();
@@ -26,13 +27,8 @@ export default async function OpetajaNousolekPage() {
           </Alert>
         )}
 
-        <div className="prose prose-sm max-w-none text-slate-700 mb-6">
-          <p>
-            Osalemine hõlmab: 15–20 katsetunni läbiviimist valitud meetodil, lühikest reflektsiooni
-            uurijapäevikus pärast iga tundi, oma tunni vaadeldavaks tegemist ja kolleegi tunni vaatlemist,
-            veebipõhist küsimustikku ning osalemist rühmaintervjuus. Täpne infoleht on lisatud käesolevale
-            taotlusele (Lisa 2).
-          </p>
+        <div className="prose prose-sm max-w-none text-slate-700 mb-6 space-y-4">
+          <OpetajaConsentInfo />
         </div>
 
         <form action="/api/consent/opetaja" method="post">
@@ -41,20 +37,23 @@ export default async function OpetajaNousolekPage() {
             name="osalemine"
             required
             defaultChecked={details.osalemine}
-            label="Olen tutvunud uuringu eesmärgi, käigu ja andmekaitsepõhimõtetega ning annan nõusoleku osaleda uuringus (katsetunnid, uurijapäevik, küsimustik)."
+            label="Olen tutvunud eespool kirjeldatud uuringu eesmärgi, käigu ja andmekaitsepõhimõtetega ning annan nõusoleku osaleda uuringus eelkirjeldatud viisil (katsetunnid, uurijapäevik, küsimustik)."
           />
           <Checkbox
             name="vaatlus"
             defaultChecked={details.vaatlus}
-            label="Annan nõusoleku, et minu tundi vaatleb kolleeg ja/või ülikooli teadlane, ning olen ise nõus vaatlema kolleegi tundi."
+            label="Annan nõusoleku, et minu tundi vaatleb kolleeg ja/või ülikooli teadlane tunnivaatlusprotokolli alusel, ning olen ise nõus vaatlema kolleegi tundi."
           />
           <Checkbox
             name="intervjuu"
             defaultChecked={details.intervjuu}
             label="Annan nõusoleku osaleda veebipõhises rühmaintervjuus, mis salvestatakse (heli ja video) ning transkribeeritakse."
           />
-          <div className="mt-6">
+          <div className="mt-6 flex items-center gap-3">
             <PrimaryButton type="submit">{hasConsent ? 'Uuenda nõusolekut' : 'Kinnita nõusolek'}</PrimaryButton>
+            {hasConsent && (
+              <SecondaryLinkButton href="/opetaja/nousolek/kinnitus">Laadi nõusolekuvorm alla</SecondaryLinkButton>
+            )}
           </div>
         </form>
 

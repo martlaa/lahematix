@@ -46,9 +46,10 @@ enum ConsentStatus {
 }
 
 enum AuthMethod {
-  HARID
+  HARID // ei ole kasutusel (versioon 3 loobus HarID-st); säilib ainult skeemi ühilduvuse pärast
   TOKEN_URL
-  DEV_LOGIN // ajutine, ainult Faas 1 arenduse ajaks, eemaldatakse enne HarID kasutuselevõttu
+  DEV_LOGIN // endine ajutine paroolita sisselogimine; asendatud EMAIL_LINK'iga, säilib vanade kirjete jaoks
+  EMAIL_LINK // magic-link sisselogimine (versioon 3, püsiv lahendus)
 }
 
 // --- Kasutajad (täiskasvanud rollid) ---
@@ -68,7 +69,8 @@ model User {
   directorOfSchool School?  @relation("SchoolDirector")
   parentProfile    Parent?
 
-  auditLogs AuditLog[]
+  auditLogs   AuditLog[]
+  loginTokens LoginToken[]
 
   @@index([role])
 }
@@ -112,7 +114,10 @@ model Parent {
 
 model Student {
   id                  String       @id @default(cuid())
-  pseudonymCode       String       @unique // nt "OP-4F7A2B"
+  pseudonymCode       String       @unique // nt "OP-4F7A2B" — kasutatakse uurimisandmestikus (testid, küsimustikud)
+  name                String       // õpilase pärisnimi — vajalik õpetaja klassivaate ja kutsete jaoks
+  email               String       @unique // vajalik küsimustiku/testi kutsete saatmiseks
+  classCode           String?      // vaba tekst, nt "5A" — õpetaja enda klassi/rühma silt, hilisemaks filtreerimiseks
   teacherId           String
   teacher             Teacher      @relation(fields: [teacherId], references: [id])
   group               StudentGroup
@@ -166,6 +171,20 @@ model InviteToken {
   expiresAt  DateTime
   usedAt     DateTime?
   createdAt  DateTime  @default(now())
+}
+
+// --- Sisselogimislingid (magic link, versioon 3) ---
+
+model LoginToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  expiresAt DateTime // 15 minutit väljastamisest
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // --- Audit log ---

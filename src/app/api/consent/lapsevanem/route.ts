@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         studentId: student.id,
         formVersion: 'v1',
         status: 'ANTUD',
-        authMethod: 'DEV_LOGIN',
+        authMethod: 'EMAIL_LINK',
         detailsJson: JSON.stringify({
           loaOsaleda: form.get('loaOsaleda') === 'on',
           lapseleTutvustatud: form.get('lapseleTutvustatud') === 'on',
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         formVersion: 'v1',
         status: 'TAGASI_VOETUD',
         withdrawnAt: new Date(),
-        authMethod: 'DEV_LOGIN',
+        authMethod: 'EMAIL_LINK',
       },
     });
     await prisma.student.update({

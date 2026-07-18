@@ -1,10 +1,9 @@
 import { cookies } from 'next/headers';
 import { getIronSession, type SessionOptions } from 'iron-session';
 
-// AJUTINE AUTENTIMISKIHT (Faas 1) — asendatakse Faasis 5 HarID SAML-liidesega.
-// Sessioon ise (iron-session, signeeritud küpsis) jääb samaks ka pärast
-// HarID lisamist; muutub ainult see, KUIDAS kasutaja identiteet enne
-// sessiooni loomist kinnitatakse.
+// Sessioonihaldus (iron-session, signeeritud küpsis) — versioon 3: HarID-st
+// loobuti, e-posti-põhine autentimine (magic link, vt api/auth/login ja
+// api/auth/verify) on nüüd püsiv lahendus, mitte ajutine vahevariant.
 
 export interface SessionData {
   userId?: string;
