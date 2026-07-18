@@ -52,6 +52,15 @@ enum AuthMethod {
   EMAIL_LINK // magic-link sisselogimine (versioon 3, püsiv lahendus)
 }
 
+// Faas 2: InviteToken eesmärk — kas nõusolek (vaikimisi, olemasolevad read) või
+// küsimustik (eel/järel). Küsimustiku token saadetakse alati õpilase enda e-postile,
+// isegi alla 15-aastasele, kuna küsimustik käib õpilase enda kohta, mitte lapsevanema.
+enum InvitePurpose {
+  CONSENT
+  QUESTIONNAIRE_EEL
+  QUESTIONNAIRE_JAREL
+}
+
 // --- Kasutajad (täiskasvanud rollid) ---
 
 model User {
@@ -69,6 +78,7 @@ model User {
 
   auditLogs   AuditLog[]
   loginTokens LoginToken[]
+  questionnaireResponses QuestionnaireResponse[]
 
   @@index([role])
 }
@@ -129,6 +139,7 @@ model Student {
 
   consentRecords ConsentRecord[]
   inviteTokens   InviteToken[]
+  questionnaireResponses QuestionnaireResponse[]
 }
 
 // --- Nõusolekud ---
@@ -159,19 +170,20 @@ model ConsentRecord {
 // --- Kutsed ja ühekordsed lingid ---
 
 model InviteToken {
-  id         String    @id @default(cuid())
-  token      String    @unique
+  id         String        @id @default(cuid())
+  token      String        @unique
   // kutse sihtmärk: kas uus User (email+role täidetud), Student (studentId täidetud)
   // või School (schoolId täidetud, koolijuhi jaoks, versioon 5)
   email      String?
   role       Role?
   studentId  String?
-  student    Student?  @relation(fields: [studentId], references: [id])
+  student    Student?      @relation(fields: [studentId], references: [id])
   schoolId   String?
-  school     School?   @relation(fields: [schoolId], references: [id])
+  school     School?       @relation(fields: [schoolId], references: [id])
+  purpose    InvitePurpose @default(CONSENT)
   expiresAt  DateTime
   usedAt     DateTime?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime      @default(now())
 }
 
 // --- Sisselogimislingid (magic link, versioon 3) ---
@@ -186,6 +198,26 @@ model LoginToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// --- Küsimustikud (Faas 2) ---
+// Küsimustiku struktuur (plokid, väited) on hardcoded src/lib/questionnaires/-is,
+// mitte DB-mudel — samamoodi nagu nõusolekuvormide tekst elab consentTexts.tsx-is.
+// questionnaireCode viitab lihtsalt stringkoodile (nt "lisa4-eel", "lisa8"),
+// samamoodi nagu ConsentRecord.formVersion on lihtne string, mitte FK.
+
+model QuestionnaireResponse {
+  id                String   @id @default(cuid())
+  questionnaireCode String
+  studentId         String?
+  student           Student? @relation(fields: [studentId], references: [id])
+  teacherUserId     String?
+  teacherUser       User?    @relation(fields: [teacherUserId], references: [id])
+  answersJson       String // { [blockKey]: { [itemKey]: string|number } }
+  submittedAt       DateTime @default(now())
+
+  @@unique([questionnaireCode, studentId])
+  @@unique([questionnaireCode, teacherUserId])
 }
 
 // --- Audit log ---

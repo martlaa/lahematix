@@ -20,6 +20,10 @@ export default async function OpetajaDashboard() {
 
   const hasConsent = ownConsent?.status === 'ANTUD';
 
+  const ownQuestionnaire = await prisma.questionnaireResponse.findUnique({
+    where: { questionnaireCode_teacherUserId: { questionnaireCode: 'lisa8', teacherUserId: session.userId } },
+  });
+
   return (
     <>
       <Header userLabel={`${session.name} (õpetaja-uurija)`} />
@@ -51,6 +55,20 @@ export default async function OpetajaDashboard() {
         >
           <h2 className="font-semibold text-slate-900">Minu õpilased</h2>
           <p className="text-sm text-slate-600 mt-1">Lisa ja halda oma klassi ja kontrollrühma õpilaste nimekirja.</p>
+        </Link>
+
+        <Link
+          href="/opetaja/kysimustik"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">
+            Minu küsimustik {ownQuestionnaire ? '✅' : '— tuleb täita'}
+          </h2>
+          <p className="text-sm text-slate-600 mt-1">
+            {ownQuestionnaire
+              ? 'Küsimustik on täidetud. Vaata staatust.'
+              : 'Täidetakse projekti lõpus (Lisa 8) — vajab enne oma nõusolekut.'}
+          </p>
         </Link>
       </main>
     </>

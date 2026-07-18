@@ -68,3 +68,13 @@ export function consentInviteEmailHtml(params: {
     <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
   `;
 }
+
+export function questionnaireInviteEmailHtml(params: { name: string; link: string }) {
+  return `
+    <p>Tere, ${params.name}!</p>
+    <p>Palume Sul täita LAHEMATE projekti küsimustik. Vastamine võtab veidi aega, aga on uuringu jaoks väga oluline.</p>
+    <p><a href="${params.link}">Ava küsimustik</a></p>
+    <p>Link on isiklik — palun ära jaga seda teistega.</p>
+    <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
+  `;
+}

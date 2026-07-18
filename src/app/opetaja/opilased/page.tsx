@@ -19,7 +19,7 @@ export default async function OpilasedPage({
     where: { teacherId: teacher!.id },
     include: {
       consentRecords: { orderBy: { createdAt: 'desc' }, take: 1 },
-      inviteTokens: { orderBy: { createdAt: 'desc' }, take: 1 },
+      inviteTokens: { where: { purpose: 'CONSENT' }, orderBy: { createdAt: 'desc' }, take: 1 },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -63,7 +63,7 @@ export default async function OpilasedPage({
           <Alert kind={inviteErrors.length > 0 ? 'info' : 'success'}>
             <p>
               Kutse saadeti {sent} inimesele.
-              {skipped > 0 && ` ${skipped} jäeti vahele, kuna nõusolek on juba antud.`}
+              {skipped > 0 && ` ${skipped} jäeti vahele (juba tehtud).`}
             </p>
             {inviteErrors.length > 0 && (
               <>
@@ -186,10 +186,11 @@ export default async function OpilasedPage({
 
         {classCodes.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-900 mb-2">Saada nõusolekukutse tervele klassile</h2>
+            <h2 className="font-semibold text-slate-900 mb-2">Saada kutse tervele klassile</h2>
             <p className="text-sm text-slate-600 mb-3">
-              Saadab kutse (või meeldetuletuse) kõigile valitud klassi õpilastele/lapsevanematele, kelle
-              nõusolek pole veel antud. Neile, kes on juba nõusoleku andnud, kutset ei saadeta.
+              Saadab kutse (või meeldetuletuse) kõigile valitud klassi õpilastele/lapsevanematele. Nõusoleku
+              puhul ei saadeta neile, kes on juba nõustunud; küsimustike puhul saadetakse ainult neile, kelle
+              nõusolek on juba antud ja kes pole veel vastanud.
             </p>
             <form action="/api/opetaja/opilased/invite" method="post" className="flex flex-wrap items-center gap-3">
               <select name="classCode" required className="rounded-md border border-slate-300 px-3 py-2 text-sm">
@@ -199,6 +200,11 @@ export default async function OpilasedPage({
                     {c}
                   </option>
                 ))}
+              </select>
+              <select name="purpose" className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <option value="CONSENT">Nõusolek</option>
+                <option value="QUESTIONNAIRE_EEL">Eelküsimustik</option>
+                <option value="QUESTIONNAIRE_JAREL">Järelküsimustik</option>
               </select>
               <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
                 Saada kutse klassile
@@ -286,7 +292,12 @@ export default async function OpilasedPage({
               </tbody>
             </table>
             {students.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <select name="purpose" className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+                  <option value="CONSENT">Nõusolek</option>
+                  <option value="QUESTIONNAIRE_EEL">Eelküsimustik</option>
+                  <option value="QUESTIONNAIRE_JAREL">Järelküsimustik</option>
+                </select>
                 <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
                   Saada kutse/meeldetuletus valitud isikutele
                 </button>

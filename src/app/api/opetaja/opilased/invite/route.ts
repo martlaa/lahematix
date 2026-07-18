@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { nanoid } from 'nanoid';
-import { sendMail, consentInviteEmailHtml } from '@/lib/mail';
+import { sendMail, consentInviteEmailHtml, questionnaireInviteEmailHtml } from '@/lib/mail';
 
 const INVITE_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 730; // ~2 aastat
+
+type Purpose = 'CONSENT' | 'QUESTIONNAIRE_EEL' | 'QUESTIONNAIRE_JAREL';
+
+const QUESTIONNAIRE_CODE_BY_PURPOSE: Record<'QUESTIONNAIRE_EEL' | 'QUESTIONNAIRE_JAREL', string> = {
+  QUESTIONNAIRE_EEL: 'lisa4-eel',
+  QUESTIONNAIRE_JAREL: 'lisa4-jarel',
+};
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -20,10 +27,14 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const classCode = String(form.get('classCode') ?? '').trim();
   const selectedIds = form.getAll('studentIds').map(String).filter(Boolean);
+  const purpose = (String(form.get('purpose') ?? 'CONSENT') as Purpose) || 'CONSENT';
 
   if (!classCode && selectedIds.length === 0) {
     return NextResponse.json({ error: 'Vali vähemalt üks õpilane või klass, kellele kutse saata' }, { status: 400 });
   }
+
+  const isQuestionnaire = purpose === 'QUESTIONNAIRE_EEL' || purpose === 'QUESTIONNAIRE_JAREL';
+  const questionnaireCode = isQuestionnaire ? QUESTIONNAIRE_CODE_BY_PURPOSE[purpose] : undefined;
 
   const students = await prisma.student.findMany({
     where: classCode
@@ -31,7 +42,8 @@ export async function POST(req: NextRequest) {
       : { teacherId: teacher.id, id: { in: selectedIds } },
     include: {
       consentRecords: { orderBy: { createdAt: 'desc' }, take: 1 },
-      inviteTokens: { orderBy: { createdAt: 'desc' }, take: 1 },
+      inviteTokens: { where: { purpose }, orderBy: { createdAt: 'desc' }, take: 1 },
+      questionnaireResponses: questionnaireCode ? { where: { questionnaireCode } } : false,
     },
   });
 
@@ -40,15 +52,27 @@ export async function POST(req: NextRequest) {
   const errors: { name: string; message: string }[] = [];
 
   for (const student of students) {
-    const alreadyConsented = student.consentRecords[0]?.status === 'ANTUD';
-    if (alreadyConsented) {
+    const hasConsent = student.consentRecords[0]?.status === 'ANTUD';
+
+    if (isQuestionnaire) {
+      if (!hasConsent) {
+        errors.push({ name: student.name, message: 'Nõusolek uuringus osalemiseks puudub' });
+        continue;
+      }
+      if (student.questionnaireResponses.length > 0) {
+        skipped++;
+        continue;
+      }
+    } else if (hasConsent) {
       skipped++;
       continue;
     }
 
     const isMinor = !student.isFifteenOrOlder;
-    const recipientEmail = isMinor ? student.parentEmail : student.email;
-    const recipientName = isMinor ? student.parentName : student.name;
+    // Küsimustik käib alati õpilase enda e-postile, olenemata vanusest — nõusolek
+    // seevastu käib alla 15a puhul lapsevanemale (vt arendusplaan punkt 1a).
+    const recipientEmail = isQuestionnaire ? student.email : isMinor ? student.parentEmail : student.email;
+    const recipientName = isQuestionnaire ? student.name : isMinor ? student.parentName : student.name;
 
     if (!recipientEmail) {
       errors.push({ name: student.name, message: 'Lapsevanema e-post puudub' });
@@ -58,33 +82,45 @@ export async function POST(req: NextRequest) {
     let token = student.inviteTokens[0];
     if (!token || token.expiresAt < new Date()) {
       token = await prisma.inviteToken.create({
-        data: { token: nanoid(24), studentId: student.id, expiresAt: new Date(Date.now() + INVITE_TOKEN_TTL_MS) },
+        data: {
+          token: nanoid(24),
+          studentId: student.id,
+          purpose,
+          expiresAt: new Date(Date.now() + INVITE_TOKEN_TTL_MS),
+        },
       });
     }
 
-    const link = isMinor
-      ? `${process.env.APP_BASE_URL}/lapsevanem/nousolek/${token.token}`
-      : `${process.env.APP_BASE_URL}/opilane/nousolek/${token.token}`;
+    const link = isQuestionnaire
+      ? `${process.env.APP_BASE_URL}/opilane/kysimustik/${token.token}`
+      : isMinor
+        ? `${process.env.APP_BASE_URL}/lapsevanem/nousolek/${token.token}`
+        : `${process.env.APP_BASE_URL}/opilane/nousolek/${token.token}`;
 
     if (process.env.NODE_ENV !== 'production') {
       // Kohalikus arenduses, kui SMTP pole seadistatud, saab lingi siit konsoolist kopeerida.
-      console.log(`[DEV] Nõusolekukutse (${isMinor ? 'lapsevanem' : 'õpilane'}) ${student.name}: ${link}`);
+      const kind = isQuestionnaire ? 'küsimustik' : isMinor ? 'lapsevanem' : 'õpilane';
+      console.log(`[DEV] Kutse (${kind}) ${student.name}: ${link}`);
     }
 
     try {
       await sendMail({
         to: recipientEmail,
-        subject: 'LAHEMATE projekt — kutse nõusolekuvormi täitmiseks',
-        html: consentInviteEmailHtml({
-          name: recipientName ?? '',
-          link,
-          forChildName: isMinor ? student.name : undefined,
-          formal: isMinor, // 15+ õpilasele endale pöördutakse mitteformaalselt ("Sul")
-        }),
+        subject: isQuestionnaire
+          ? 'LAHEMATE projekt — kutse küsimustiku täitmiseks'
+          : 'LAHEMATE projekt — kutse nõusolekuvormi täitmiseks',
+        html: isQuestionnaire
+          ? questionnaireInviteEmailHtml({ name: recipientName ?? '', link })
+          : consentInviteEmailHtml({
+              name: recipientName ?? '',
+              link,
+              forChildName: isMinor ? student.name : undefined,
+              formal: isMinor, // 15+ õpilasele endale pöördutakse mitteformaalselt ("Sul")
+            }),
       });
       sent++;
     } catch (err) {
-      console.error('Nõusolekukutse saatmine ebaõnnestus:', err);
+      console.error('Kutse saatmine ebaõnnestus:', err);
       errors.push({ name: student.name, message: 'E-kirja saatmine ebaõnnestus' });
     }
   }
@@ -95,7 +131,7 @@ export async function POST(req: NextRequest) {
       action: 'SEND_INVITE',
       entity: 'Student',
       entityId: teacher.id,
-      meta: `sent=${sent}, skipped=${skipped}, errors=${errors.length}`,
+      meta: `purpose=${purpose}, sent=${sent}, skipped=${skipped}, errors=${errors.length}`,
     },
   });
 
