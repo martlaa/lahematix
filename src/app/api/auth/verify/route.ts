@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+// Lapsevanem ei kasuta seda voogu (versioon 4) — vt /lapsevanem/nousolek/[token].
 const roleRedirect: Record<string, string> = {
   ADMIN: '/admin',
   TEADUR: '/teadur',
   OPETAJA: '/opetaja',
   KOOLIJUHT: '/koolijuht/nousolek',
-  LAPSEVANEM: '/lapsevanem',
 };
 
 export async function GET(req: NextRequest) {

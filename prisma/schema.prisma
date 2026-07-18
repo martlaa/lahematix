@@ -67,7 +67,6 @@ model User {
   // rollipõhised laiendused (valikulised, ainult üks täidetud vastavalt rollile)
   teacherProfile   Teacher?
   directorOfSchool School?  @relation("SchoolDirector")
-  parentProfile    Parent?
 
   auditLogs   AuditLog[]
   loginTokens LoginToken[]
@@ -101,16 +100,10 @@ model Teacher {
   students Student[]
 }
 
-model Parent {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-
-  students Student[]
-}
-
 // --- Õpilased (ei ole User — token-põhine ligipääs, vt InviteToken) ---
+// Versioon 4: lapsevanem ei ole enam eraldi kasutajakonto (vt arendusplaan punkt 1a) —
+// tema nimi/e-post on lihtsalt väljad Student'il, ja ta pääseb ligi ainult ühekordse
+// token-URL-i kaudu (InviteToken), samamoodi nagu 15+ õpilane ise.
 
 model Student {
   id                  String       @id @default(cuid())
@@ -124,8 +117,8 @@ model Student {
   birthYear           Int?
   gender              String?
   isFifteenOrOlder    Boolean      @default(false)
-  parentId            String?
-  parent              Parent?      @relation(fields: [parentId], references: [id])
+  parentName          String? // täidetud, kui alla 15a — ei ole eraldi kasutajakonto
+  parentEmail         String? // täidetud, kui alla 15a — kutse/meeldetuletuse saatmiseks
   excludedFromAnalysis Boolean     @default(false)
   excludedAt          DateTime?
   createdAt           DateTime     @default(now())

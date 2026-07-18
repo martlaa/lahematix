@@ -1,24 +1,21 @@
-import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
-import { redirect, notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { PrintableConsent } from '@/components/PrintableConsent';
 import { LapsevanemConsentInfo } from '@/components/consentTexts';
 
-export default async function LapsevanemKinnitusPage({ params }: { params: { studentId: string } }) {
-  const session = await getSession();
-  if (!session.userId || session.role !== 'LAPSEVANEM') redirect('/login');
-
-  const parent = await prisma.parent.findUnique({ where: { userId: session.userId } });
-  if (!parent) redirect('/lapsevanem');
-
-  const student = await prisma.student.findFirst({
-    where: { id: params.studentId, parentId: parent.id },
-    include: { consentRecords: { where: { status: 'ANTUD' }, orderBy: { createdAt: 'desc' }, take: 1 } },
+export default async function LapsevanemKinnitusPage({ params }: { params: { token: string } }) {
+  const invite = await prisma.inviteToken.findUnique({
+    where: { token: params.token },
+    include: {
+      student: { include: { consentRecords: { where: { status: 'ANTUD' }, orderBy: { createdAt: 'desc' }, take: 1 } } },
+    },
   });
-  if (!student) notFound();
 
+  if (!invite || !invite.student) notFound();
+
+  const student = invite.student;
   const latest = student.consentRecords[0];
-  if (!latest) redirect(`/lapsevanem/nousolek/${student.id}`);
+  if (!latest) redirect(`/lapsevanem/nousolek/${params.token}`);
 
   const details = latest.detailsJson ? JSON.parse(latest.detailsJson) : {};
 
@@ -38,7 +35,7 @@ export default async function LapsevanemKinnitusPage({ params }: { params: { stu
         },
       ]}
       meta={[
-        { label: 'Lapsevanema nimi', value: session.name ?? '' },
+        { label: 'Lapsevanema nimi', value: student.parentName ?? '' },
         { label: 'Õpilase kood', value: student.pseudonymCode },
         { label: 'Kuupäev', value: latest.givenAt.toLocaleDateString('et-EE') },
       ]}

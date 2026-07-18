@@ -183,17 +183,31 @@ export default async function AdminPage({
                 <th className="py-1">E-post</th>
                 <th className="py-1">Roll</th>
                 <th className="py-1">Staatus</th>
+                <th className="py-1"></th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-slate-100">
-                  <td className="py-1">{u.name}</td>
-                  <td className="py-1">{u.email}</td>
-                  <td className="py-1">{u.role}</td>
-                  <td className="py-1">{u.status}</td>
-                </tr>
-              ))}
+              {users.map((u) => {
+                const removable = ['TEADUR', 'OPETAJA', 'KOOLIJUHT'].includes(u.role);
+                return (
+                  <tr key={u.id} className="border-b border-slate-100">
+                    <td className="py-1">{u.name}</td>
+                    <td className="py-1">{u.email}</td>
+                    <td className="py-1">{u.role}</td>
+                    <td className="py-1">{u.status}</td>
+                    <td className="py-1 text-right">
+                      {removable && u.status !== 'DISABLED' && (
+                        <form action="/api/admin/users/remove" method="post">
+                          <input type="hidden" name="userId" value={u.id} />
+                          <button type="submit" className="text-xs text-red-600 underline hover:no-underline">
+                            Eemalda
+                          </button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </section>

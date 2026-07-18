@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { generatePseudonym } from '@/lib/pseudonym';
 import { nanoid } from 'nanoid';
-import { sendMail, inviteEmailHtml } from '@/lib/mail';
 
 export type StudentGroupValue = 'INTERVENTSIOON' | 'KONTROLL';
 
@@ -21,9 +20,16 @@ export type CreateStudentResult =
   | { status: 'created'; student: Awaited<ReturnType<typeof prisma.student.create>> }
   | { status: 'duplicate'; existingName: string };
 
-/** Loob õpilase (ja vajadusel lapsevanema kasutaja + kutse) — jagatud loogika
- *  ükshaaval lisamise vormi ja CSV-importi vahel. Kui e-postiga õpilane on juba
- *  olemas, ei looda duplikaati, vaid tagastatakse "duplicate" tulemus. */
+// Nõusoleku/kutse token peab kehtima kogu andmekogumise perioodi vältel (vt
+// arendusplaan punkt 1a), mitte ainult mõne kuu — orienteeruvalt kuni 2028. a suveni.
+const INVITE_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 730; // ~2 aastat
+
+/** Loob õpilase — jagatud loogika ükshaaval lisamise vormi ja CSV-importi vahel.
+ *  Kui e-postiga õpilane on juba olemas, ei looda duplikaati, vaid tagastatakse
+ *  "duplicate" tulemus. Lapsevanema nimi/e-post salvestatakse lihtsalt väljadena
+ *  (versioon 4 — lapsevanemal pole enam eraldi kasutajakontot). Igale õpilasele
+ *  luuakse kohe üks InviteToken, mida õpetaja saab hiljem kutse/meeldetuletuse
+ *  saatmiseks kasutada (vt /api/opetaja/opilased/invite). */
 export async function createStudent(teacherId: string, input: StudentInput): Promise<CreateStudentResult> {
   if (!input.name) {
     throw new Error('Õpilase nimi on kohustuslik');
@@ -48,37 +54,6 @@ export async function createStudent(teacherId: string, input: StudentInput): Pro
     pseudonymCode = generatePseudonym();
   }
 
-  let parentId: string | null = null;
-
-  if (!input.isFifteenOrOlder) {
-    const parentEmail = input.parentEmail.toLowerCase();
-    const parentUser = await prisma.user.upsert({
-      where: { email: parentEmail },
-      update: { name: input.parentName },
-      create: { name: input.parentName, email: parentEmail, role: 'LAPSEVANEM', status: 'INVITED' },
-    });
-    const parent = await prisma.parent.upsert({
-      where: { userId: parentUser.id },
-      update: {},
-      create: { userId: parentUser.id },
-    });
-    parentId = parent.id;
-
-    try {
-      await sendMail({
-        to: parentEmail,
-        subject: 'LAHEMATE projekt — nõusoleku vorm Teie lapse osalemiseks',
-        html: inviteEmailHtml({
-          name: input.parentName,
-          link: `${process.env.APP_BASE_URL}/login`,
-          roleLabel: 'lapsevanem',
-        }),
-      });
-    } catch (err) {
-      console.error('Lapsevanema kutse saatmine ebaõnnestus:', err);
-    }
-  }
-
   const student = await prisma.student.create({
     data: {
       pseudonymCode,
@@ -90,19 +65,18 @@ export async function createStudent(teacherId: string, input: StudentInput): Pro
       birthYear: input.birthYear,
       gender: input.gender,
       isFifteenOrOlder: input.isFifteenOrOlder,
-      parentId,
+      parentName: input.isFifteenOrOlder ? null : input.parentName,
+      parentEmail: input.isFifteenOrOlder ? null : input.parentEmail.toLowerCase(),
     },
   });
 
-  if (input.isFifteenOrOlder) {
-    await prisma.inviteToken.create({
-      data: {
-        token: nanoid(24),
-        studentId: student.id,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 120), // 120 päeva
-      },
-    });
-  }
+  await prisma.inviteToken.create({
+    data: {
+      token: nanoid(24),
+      studentId: student.id,
+      expiresAt: new Date(Date.now() + INVITE_TOKEN_TTL_MS),
+    },
+  });
 
   return { status: 'created', student };
 }

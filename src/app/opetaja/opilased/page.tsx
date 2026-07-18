@@ -7,7 +7,7 @@ import { Alert } from '@/components/ui';
 export default async function OpilasedPage({
   searchParams,
 }: {
-  searchParams: { imported?: string; errors?: string };
+  searchParams: { imported?: string; errors?: string; sent?: string; skipped?: string; inviteErrors?: string };
 }) {
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
@@ -18,17 +18,23 @@ export default async function OpilasedPage({
   const students = await prisma.student.findMany({
     where: { teacherId: teacher!.id },
     include: {
-      parent: { include: { user: true } },
       consentRecords: { orderBy: { createdAt: 'desc' }, take: 1 },
       inviteTokens: { orderBy: { createdAt: 'desc' }, take: 1 },
     },
     orderBy: { createdAt: 'desc' },
   });
 
+  const classCodes = [...new Set(students.map((s) => s.classCode).filter((c): c is string => !!c))].sort();
+
   const baseUrl = process.env.APP_BASE_URL ?? '';
   const imported = searchParams.imported ? Number(searchParams.imported) : null;
   const importErrors: { row: number; message: string }[] = searchParams.errors
     ? JSON.parse(searchParams.errors)
+    : [];
+  const sent = searchParams.sent ? Number(searchParams.sent) : null;
+  const skipped = searchParams.skipped ? Number(searchParams.skipped) : 0;
+  const inviteErrors: { name: string; message: string }[] = searchParams.inviteErrors
+    ? JSON.parse(searchParams.inviteErrors)
     : [];
 
   return (
@@ -53,14 +59,35 @@ export default async function OpilasedPage({
           </Alert>
         )}
 
+        {sent !== null && (
+          <Alert kind={inviteErrors.length > 0 ? 'info' : 'success'}>
+            <p>
+              Kutse saadeti {sent} inimesele.
+              {skipped > 0 && ` ${skipped} jäeti vahele, kuna nõusolek on juba antud.`}
+            </p>
+            {inviteErrors.length > 0 && (
+              <>
+                <p className="mt-2 font-medium">{inviteErrors.length} kutset ei õnnestunud saata:</p>
+                <ul className="list-disc list-inside">
+                  {inviteErrors.map((e, i) => (
+                    <li key={i}>
+                      {e.name}: {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </Alert>
+        )}
+
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Lisa õpilane</h2>
           <Alert kind="info">
             Nimi ja e-post on vajalikud, et hiljem saaks õpilasele saata küsimustiku/testi kutse ning et
             eel- ja järelandmed saaks omavahel siduda. Uurimisandmestikus (testid, küsimustikud)
             kasutatakse ainult pseudonüümikoodi, mitte nime. Kui õpilane on alla 15-aastane, täida ka
-            lapsevanema väljad — vanemale saadetakse nõusolekukutse e-postiga. 15-aastastele ja
-            vanematele genereerib süsteem ühekordse nõusolekulingi, mille saad ise õpilasele edastada.
+            lapsevanema väljad. Nõusolekukutseid ei saadeta automaatselt — vali allpool nimekirjast, kellele
+            ja millal kutse saata.
           </Alert>
           <form action="/api/opetaja/opilased" method="post" className="space-y-3 mt-4">
             <div className="grid grid-cols-2 gap-3">
@@ -157,67 +184,115 @@ export default async function OpilasedPage({
           </form>
         </div>
 
+        {classCodes.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="font-semibold text-slate-900 mb-2">Saada nõusolekukutse tervele klassile</h2>
+            <p className="text-sm text-slate-600 mb-3">
+              Saadab kutse (või meeldetuletuse) kõigile valitud klassi õpilastele/lapsevanematele, kelle
+              nõusolek pole veel antud. Neile, kes on juba nõusoleku andnud, kutset ei saadeta.
+            </p>
+            <form action="/api/opetaja/opilased/invite" method="post" className="flex flex-wrap items-center gap-3">
+              <select name="classCode" required className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <option value="">— vali klass —</option>
+                {classCodes.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                Saada kutse klassile
+              </button>
+            </form>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Õpilaste nimekiri ({students.length})</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500 border-b border-slate-200">
-                <th className="py-1">Nimi</th>
-                <th className="py-1">Pseudonüüm</th>
-                <th className="py-1">Klass</th>
-                <th className="py-1">Rühm</th>
-                <th className="py-1">Nõusolek</th>
-                <th className="py-1">Link / vanem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s) => {
-                const consent = s.consentRecords[0];
-                const consentGiven = consent?.status === 'ANTUD';
-                const token = s.inviteTokens[0];
-                return (
-                  <tr key={s.id} className="border-b border-slate-100 align-top">
-                    <td className="py-2">
-                      {s.name}
-                      <div className="text-xs text-slate-400">{s.email}</div>
-                    </td>
-                    <td className="py-2 font-mono">{s.pseudonymCode}</td>
-                    <td className="py-2">{s.classCode ?? '—'}</td>
-                    <td className="py-2">{s.group === 'INTERVENTSIOON' ? 'Sekkumine' : 'Kontroll'}</td>
-                    <td className="py-2">
-                      {s.excludedFromAnalysis ? (
-                        <span className="text-red-600">Väljajäetud</span>
-                      ) : consentGiven ? (
-                        <span className="text-green-600">Antud</span>
-                      ) : (
-                        <span className="text-slate-400">Puudub</span>
-                      )}
-                    </td>
-                    <td className="py-2 text-xs">
-                      {s.isFifteenOrOlder ? (
-                        token ? (
-                          <code className="break-all">{`${baseUrl}/opilane/nousolek/${token.token}`}</code>
+          <form action="/api/opetaja/opilased/invite" method="post">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200">
+                  <th className="py-1"></th>
+                  <th className="py-1">Nimi</th>
+                  <th className="py-1">Pseudonüüm</th>
+                  <th className="py-1">Klass</th>
+                  <th className="py-1">Rühm</th>
+                  <th className="py-1">Nõusolek</th>
+                  <th className="py-1">Link / vanem</th>
+                  <th className="py-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((s) => {
+                  const consent = s.consentRecords[0];
+                  const consentGiven = consent?.status === 'ANTUD';
+                  const token = s.inviteTokens[0];
+                  return (
+                    <tr key={s.id} className="border-b border-slate-100 align-top">
+                      <td className="py-2">
+                        <input type="checkbox" name="studentIds" value={s.id} className="h-4 w-4 rounded border-slate-300" />
+                      </td>
+                      <td className="py-2">
+                        {s.name}
+                        <div className="text-xs text-slate-400">{s.email}</div>
+                      </td>
+                      <td className="py-2 font-mono">{s.pseudonymCode}</td>
+                      <td className="py-2">{s.classCode ?? '—'}</td>
+                      <td className="py-2">{s.group === 'INTERVENTSIOON' ? 'Sekkumine' : 'Kontroll'}</td>
+                      <td className="py-2">
+                        {s.excludedFromAnalysis ? (
+                          <span className="text-red-600">Väljajäetud</span>
+                        ) : consentGiven ? (
+                          <span className="text-green-600">Antud</span>
+                        ) : (
+                          <span className="text-slate-400">Puudub</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-xs">
+                        {s.isFifteenOrOlder ? (
+                          token ? (
+                            <code className="break-all">{`${baseUrl}/opilane/nousolek/${token.token}`}</code>
+                          ) : (
+                            '—'
+                          )
+                        ) : s.parentName ? (
+                          `${s.parentName} (${s.parentEmail})`
                         ) : (
                           '—'
-                        )
-                      ) : s.parent ? (
-                        `${s.parent.user.name} (${s.parent.user.email})`
-                      ) : (
-                        '—'
-                      )}
+                        )}
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          type="submit"
+                          formAction="/api/opetaja/opilased/remove"
+                          name="studentId"
+                          value={s.id}
+                          className="text-xs text-red-600 underline hover:no-underline"
+                        >
+                          Eemalda
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {students.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-4 text-center text-slate-400">
+                      Õpilasi pole veel lisatud
                     </td>
                   </tr>
-                );
-              })}
-              {students.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-4 text-center text-slate-400">
-                    Õpilasi pole veel lisatud
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+            {students.length > 0 && (
+              <div className="mt-4">
+                <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                  Saada kutse/meeldetuletus valitud isikutele
+                </button>
+              </div>
+            )}
+          </form>
         </div>
       </main>
     </>

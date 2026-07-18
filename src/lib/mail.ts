@@ -46,3 +46,17 @@ export function magicLinkEmailHtml(params: { name: string; link: string }) {
     <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
   `;
 }
+
+export function consentInviteEmailHtml(params: { name: string; link: string; forChildName?: string }) {
+  const intro = params.forChildName
+    ? `<p>Palume Teil täita nõusolekuvorm oma lapse <strong>${params.forChildName}</strong> LAHEMATE uuringus osalemiseks.</p>`
+    : `<p>Palume Sul täita nõusolekuvorm LAHEMATE uuringus osalemiseks.</p>`;
+  return `
+    <p>Tere, ${params.name}!</p>
+    ${intro}
+    <p><a href="${params.link}">Ava nõusolekuvorm</a></p>
+    <p>Link on isiklik — palun ära jaga seda teistega. See jääb kehtima kogu uuringu vältel,
+    nii et kasuta sama linki ka hiljem, kui soovid oma vastust muuta või nõusoleku tagasi võtta.</p>
+    <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
+  `;
+}
