@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+
+// Versioon 5: koolijuhil pole enam kasutajakontot ega sisselogimist — ligipääs käib
+// ühekordse token-URL-i kaudu (samamoodi nagu lapsevanem ja 15+ õpilase enda nõusolek).
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session.userId || session.role !== 'KOOLIJUHT') {
-    return NextResponse.json({ error: 'Ligipääs keelatud' }, { status: 403 });
-  }
-
   const form = await req.formData();
+  const token = String(form.get('token') ?? '');
   const action = String(form.get('action') ?? '');
 
-  const school = await prisma.school.findUnique({ where: { directorId: session.userId } });
+  const invite = await prisma.inviteToken.findUnique({ where: { token } });
+  if (!invite || !invite.schoolId || invite.expiresAt < new Date()) {
+    return NextResponse.json({ error: 'Link on aegunud või kehtetu' }, { status: 404 });
+  }
+
+  const school = await prisma.school.findUnique({ where: { id: invite.schoolId } });
   if (!school) {
     return NextResponse.json({ error: 'Kooli ei leitud' }, { status: 404 });
   }
@@ -24,10 +27,10 @@ export async function POST(req: NextRequest) {
     await prisma.consentRecord.create({
       data: {
         subjectType: 'KOOLIJUHT',
-        subjectId: session.userId,
+        subjectId: school.id,
         formVersion: 'v1',
         status: 'ANTUD',
-        authMethod: 'EMAIL_LINK',
+        authMethod: 'TOKEN_URL',
       },
     });
   } else if (action === 'withdraw') {
@@ -38,18 +41,24 @@ export async function POST(req: NextRequest) {
     await prisma.consentRecord.create({
       data: {
         subjectType: 'KOOLIJUHT',
-        subjectId: session.userId,
+        subjectId: school.id,
         formVersion: 'v1',
         status: 'TAGASI_VOETUD',
         withdrawnAt: new Date(),
-        authMethod: 'EMAIL_LINK',
+        authMethod: 'TOKEN_URL',
       },
     });
   }
 
   await prisma.auditLog.create({
-    data: { actorId: session.userId, action: `CONSENT_${action.toUpperCase()}`, entity: 'School', entityId: school.id },
+    data: {
+      actorId: null,
+      action: `CONSENT_${action.toUpperCase()}`,
+      entity: 'School',
+      entityId: school.id,
+      meta: 'via token_url',
+    },
   });
 
-  return NextResponse.redirect(new URL('/koolijuht/nousolek', req.url), 303);
+  return NextResponse.redirect(new URL(`/koolijuht/nousolek/${token}`, req.url), 303);
 }

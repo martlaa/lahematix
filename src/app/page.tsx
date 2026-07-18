@@ -5,8 +5,6 @@ const roleRedirect: Record<string, string> = {
   ADMIN: '/admin',
   TEADUR: '/teadur',
   OPETAJA: '/opetaja',
-  KOOLIJUHT: '/koolijuht/nousolek',
-  LAPSEVANEM: '/lapsevanem',
 };
 
 export default async function HomePage() {

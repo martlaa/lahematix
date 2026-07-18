@@ -13,7 +13,7 @@ export default async function AdminPage({
   if (!session.userId || session.role !== 'ADMIN') redirect('/login');
 
   const schools = await prisma.school.findMany({
-    include: { teachers: { include: { user: true } }, director: true },
+    include: { teachers: { include: { user: true } } },
     orderBy: { name: 'asc' },
   });
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
@@ -49,14 +49,29 @@ export default async function AdminPage({
 
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Uus kool</h2>
-          <form action="/api/admin/schools" method="post" className="flex gap-3">
+          <p className="text-sm text-slate-600 mb-3">
+            Koolijuhi nime ja e-posti võid lisada kohe või hiljem allpool "Koolid ja õpetajad" all —
+            koolijuht ei vaja kasutajakontot, talle saadetakse hiljem ühekordne nõusolekulink.
+          </p>
+          <form action="/api/admin/schools" method="post" className="grid grid-cols-3 gap-3">
             <input
               name="name"
               required
               placeholder="Kooli nimi"
-              className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
-            <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+            <input
+              name="directorName"
+              placeholder="Koolijuhi nimi (valikuline)"
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <input
+              name="directorEmail"
+              type="email"
+              placeholder="Koolijuhi e-post (valikuline)"
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <button className="col-span-3 rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
               Lisa kool
             </button>
           </form>
@@ -84,10 +99,9 @@ export default async function AdminPage({
               <select name="role" required className="rounded-md border border-slate-300 px-3 py-2 text-sm">
                 <option value="TEADUR">Teadur</option>
                 <option value="OPETAJA">Õpetaja-uurija</option>
-                <option value="KOOLIJUHT">Koolijuht</option>
               </select>
               <select name="schoolId" className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-                <option value="">— kool (õpetajale/koolijuhile) —</option>
+                <option value="">— kool (õpetajale) —</option>
                 {schools.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -158,9 +172,43 @@ export default async function AdminPage({
                     {s.consentGiven ? 'Nõusolek antud' : 'Nõusolek puudub'}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mt-1">
-                  Koolijuht: {s.director ? s.director.name : '— pole kutsutud —'}
-                </p>
+
+                {s.directorEmail ? (
+                  <div className="mt-1 flex items-center gap-3">
+                    <p className="text-sm text-slate-500">
+                      Koolijuht: {s.directorName} ({s.directorEmail})
+                    </p>
+                    {!s.consentGiven && (
+                      <form action="/api/admin/schools/invite" method="post">
+                        <input type="hidden" name="schoolId" value={s.id} />
+                        <button type="submit" className="text-xs text-brand-600 underline hover:no-underline">
+                          Saada kutse/meeldetuletus
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  <form action="/api/admin/schools/director" method="post" className="mt-2 flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="schoolId" value={s.id} />
+                    <input
+                      name="directorName"
+                      required
+                      placeholder="Koolijuhi nimi"
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                    />
+                    <input
+                      name="directorEmail"
+                      type="email"
+                      required
+                      placeholder="Koolijuhi e-post"
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                    />
+                    <button type="submit" className="text-xs text-brand-600 underline hover:no-underline">
+                      Määra koolijuht
+                    </button>
+                  </form>
+                )}
+
                 <ul className="mt-2 text-sm text-slate-700 list-disc list-inside">
                   {s.teachers.map((t) => (
                     <li key={t.id}>
@@ -188,7 +236,7 @@ export default async function AdminPage({
             </thead>
             <tbody>
               {users.map((u) => {
-                const removable = ['TEADUR', 'OPETAJA', 'KOOLIJUHT'].includes(u.role);
+                const removable = ['TEADUR', 'OPETAJA'].includes(u.role);
                 return (
                   <tr key={u.id} className="border-b border-slate-100">
                     <td className="py-1">{u.name}</td>

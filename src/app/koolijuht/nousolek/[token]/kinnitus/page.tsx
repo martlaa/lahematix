@@ -1,15 +1,17 @@
-import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { PrintableConsent } from '@/components/PrintableConsent';
 import { KoolijuhtConsentInfo } from '@/components/consentTexts';
 
-export default async function KoolijuhtKinnitusPage() {
-  const session = await getSession();
-  if (!session.userId || session.role !== 'KOOLIJUHT') redirect('/login');
+export default async function KoolijuhtKinnitusPage({ params }: { params: { token: string } }) {
+  const invite = await prisma.inviteToken.findUnique({
+    where: { token: params.token },
+    include: { school: true },
+  });
 
-  const school = await prisma.school.findUnique({ where: { directorId: session.userId } });
-  if (!school || !school.consentGiven) redirect('/koolijuht/nousolek');
+  if (!invite || !invite.school) notFound();
+  const school = invite.school!;
+  if (!school.consentGiven) redirect(`/koolijuht/nousolek/${params.token}`);
 
   return (
     <PrintableConsent
@@ -23,7 +25,7 @@ export default async function KoolijuhtKinnitusPage() {
         },
       ]}
       meta={[
-        { label: 'Koolijuhi nimi', value: session.name ?? '' },
+        { label: 'Koolijuhi nimi', value: school.directorName ?? '' },
         { label: 'Kool', value: school.name },
         { label: 'Kuupäev', value: school.consentAt?.toLocaleDateString('et-EE') ?? '' },
       ]}

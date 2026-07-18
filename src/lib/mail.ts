@@ -47,10 +47,18 @@ export function magicLinkEmailHtml(params: { name: string; link: string }) {
   `;
 }
 
-export function consentInviteEmailHtml(params: { name: string; link: string; forChildName?: string }) {
+export function consentInviteEmailHtml(params: {
+  name: string;
+  link: string;
+  forChildName?: string;
+  formal?: boolean; // "Teil" (vaikimisi, täiskasvanule) vs "Sul" (15+ õpilasele endale)
+}) {
+  const formal = params.formal ?? true;
   const intro = params.forChildName
     ? `<p>Palume Teil täita nõusolekuvorm oma lapse <strong>${params.forChildName}</strong> LAHEMATE uuringus osalemiseks.</p>`
-    : `<p>Palume Sul täita nõusolekuvorm LAHEMATE uuringus osalemiseks.</p>`;
+    : formal
+      ? `<p>Palume Teil täita nõusolekuvorm LAHEMATE uuringus osalemiseks.</p>`
+      : `<p>Palume Sul täita nõusolekuvorm LAHEMATE uuringus osalemiseks.</p>`;
   return `
     <p>Tere, ${params.name}!</p>
     ${intro}

@@ -65,8 +65,7 @@ model User {
   updatedAt      DateTime @updatedAt
 
   // rollipõhised laiendused (valikulised, ainult üks täidetud vastavalt rollile)
-  teacherProfile   Teacher?
-  directorOfSchool School?  @relation("SchoolDirector")
+  teacherProfile Teacher?
 
   auditLogs   AuditLog[]
   loginTokens LoginToken[]
@@ -74,16 +73,21 @@ model User {
   @@index([role])
 }
 
-model School {
-  id           String   @id @default(cuid())
-  name         String
-  directorId   String?  @unique
-  director     User?    @relation("SchoolDirector", fields: [directorId], references: [id])
-  consentGiven Boolean  @default(false)
-  consentAt    DateTime?
-  createdAt    DateTime @default(now())
+// Versioon 5: koolijuht ei ole enam eraldi kasutajakonto (vt arendusplaan punkt 1b) —
+// tema nimi/e-post on lihtsalt väljad School'il, ja ta pääseb ligi ainult ühekordse
+// token-URL-i kaudu (InviteToken), samamoodi nagu lapsevanem ja 15+ õpilane.
 
-  teachers Teacher[]
+model School {
+  id            String    @id @default(cuid())
+  name          String
+  directorName  String?
+  directorEmail String?
+  consentGiven  Boolean   @default(false)
+  consentAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  teachers     Teacher[]
+  inviteTokens InviteToken[]
 }
 
 model Teacher {
@@ -132,7 +136,8 @@ model Student {
 model ConsentRecord {
   id          String             @id @default(cuid())
   subjectType ConsentSubjectType
-  // subjectId viitab kas User.id (koolijuht/õpetaja/lapsevanem) või Student.id (15+ õpilane)
+  // subjectId viitab: User.id (õpetaja), School.id (koolijuht, versioon 5) või
+  // Student.id (lapsevanem, versioon 4; 15+ õpilane)
   subjectId   String
   studentId   String? // täidetud, kui nõusolek puudutab konkreetset last (lapsevanema puhul)
   student     Student?           @relation(fields: [studentId], references: [id])
@@ -156,11 +161,14 @@ model ConsentRecord {
 model InviteToken {
   id         String    @id @default(cuid())
   token      String    @unique
-  // kutse sihtmärk: kas uus User (email+role täidetud) või Student (studentId täidetud)
+  // kutse sihtmärk: kas uus User (email+role täidetud), Student (studentId täidetud)
+  // või School (schoolId täidetud, koolijuhi jaoks, versioon 5)
   email      String?
   role       Role?
   studentId  String?
   student    Student?  @relation(fields: [studentId], references: [id])
+  schoolId   String?
+  school     School?   @relation(fields: [schoolId], references: [id])
   expiresAt  DateTime
   usedAt     DateTime?
   createdAt  DateTime  @default(now())

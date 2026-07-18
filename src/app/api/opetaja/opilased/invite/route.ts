@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
           name: recipientName ?? '',
           link,
           forChildName: isMinor ? student.name : undefined,
+          formal: isMinor, // 15+ õpilasele endale pöördutakse mitteformaalselt ("Sul")
         }),
       });
       sent++;

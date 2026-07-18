@@ -5,9 +5,11 @@ import { getIronSession, type SessionOptions } from 'iron-session';
 // loobuti, e-posti-põhine autentimine (magic link, vt api/auth/login ja
 // api/auth/verify) on nüüd püsiv lahendus, mitte ajutine vahevariant.
 
+// Koolijuht (versioon 5) ja lapsevanem (versioon 4) ei kasuta enam sessiooni —
+// mõlemad pääsevad ligi ainult token-URL kaudu, vt InviteToken.
 export interface SessionData {
   userId?: string;
-  role?: 'ADMIN' | 'TEADUR' | 'OPETAJA' | 'KOOLIJUHT' | 'LAPSEVANEM';
+  role?: 'ADMIN' | 'TEADUR' | 'OPETAJA';
   email?: string;
   name?: string;
 }

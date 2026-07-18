@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
 // Ainult need rollid, mida admin saab siit deaktiveerida. ADMIN-i ennast ja
-// LAPSEVANEMAT (mida hallatakse õpilase eemaldamise kaudu) siin ei näidata.
-const removableRoles = ['TEADUR', 'OPETAJA', 'KOOLIJUHT'];
+// LAPSEVANEMAT/KOOLIJUHTI (mida hallatakse vastavalt õpilase eemaldamise ja
+// kooli-tasandi voo kaudu, versioon 4/5) siin ei näidata.
+const removableRoles = ['TEADUR', 'OPETAJA'];
 
 export async function POST(req: NextRequest) {
   const session = await getSession();

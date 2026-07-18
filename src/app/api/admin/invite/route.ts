@@ -6,7 +6,6 @@ import { sendMail, inviteEmailHtml } from '@/lib/mail';
 const roleLabels: Record<string, string> = {
   TEADUR: 'teadur',
   OPETAJA: 'õpetaja-uurija',
-  KOOLIJUHT: 'koolijuht',
 };
 
 export async function POST(req: NextRequest) {
@@ -21,11 +20,11 @@ export async function POST(req: NextRequest) {
   const role = String(form.get('role') ?? '');
   const schoolId = String(form.get('schoolId') ?? '') || null;
 
-  if (!name || !email || !['TEADUR', 'OPETAJA', 'KOOLIJUHT'].includes(role)) {
+  if (!name || !email || !['TEADUR', 'OPETAJA'].includes(role)) {
     return NextResponse.json({ error: 'Puuduvad kohustuslikud väljad' }, { status: 400 });
   }
-  if ((role === 'OPETAJA' || role === 'KOOLIJUHT') && !schoolId) {
-    return NextResponse.json({ error: 'Õpetajale ja koolijuhile tuleb kool valida' }, { status: 400 });
+  if (role === 'OPETAJA' && !schoolId) {
+    return NextResponse.json({ error: 'Õpetajale tuleb kool valida' }, { status: 400 });
   }
 
   const user = await prisma.user.upsert({
@@ -40,9 +39,6 @@ export async function POST(req: NextRequest) {
       update: { schoolId },
       create: { userId: user.id, schoolId },
     });
-  }
-  if (role === 'KOOLIJUHT' && schoolId) {
-    await prisma.school.update({ where: { id: schoolId }, data: { directorId: user.id } });
   }
 
   const loginLink = `${process.env.APP_BASE_URL}/login`;
