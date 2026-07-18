@@ -18,6 +18,11 @@ export default async function LapsevanemNousolekTokenPage({ params }: { params: 
   const hasConsent = latest?.status === 'ANTUD';
   const details = latest?.detailsJson ? JSON.parse(latest.detailsJson) : {};
 
+  if (!hasConsent && !invite.firstViewedAt) {
+    // Märgi ära, et link on avatud — annab õpetaja vaates "alustatud, kuid pooleli" signaali.
+    await prisma.inviteToken.update({ where: { id: invite.id }, data: { firstViewedAt: new Date() } });
+  }
+
   return (
     <FormShell
       title={`Nõusolek: ${student.name}`}

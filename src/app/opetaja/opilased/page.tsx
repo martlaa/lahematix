@@ -220,7 +220,7 @@ export default async function OpilasedPage({
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-1">Õpilaste nimekiri ({students.length})</h2>
-          <StatusLegend />
+          <StatusLegend showWithdrawn />
           <form action="/api/opetaja/opilased/invite" method="post">
             <table className="w-full text-sm">
               <thead>
@@ -230,11 +230,11 @@ export default async function OpilasedPage({
                   <th className="py-1">Pseudonüüm</th>
                   <th className="py-1">Klass</th>
                   <th className="py-1">Rühm</th>
-                  <th className="py-1">Nõusolek</th>
-                  <th className="py-1" title="Eelküsimustik">
+                  <th className="py-1 text-center">Nõus</th>
+                  <th className="py-1 text-center" title="Eelküsimustik">
                     Eel
                   </th>
-                  <th className="py-1" title="Järelküsimustik">
+                  <th className="py-1 text-center" title="Järelküsimustik">
                     Järel
                   </th>
                   <th className="py-1">Link / vanem</th>
@@ -262,19 +262,17 @@ export default async function OpilasedPage({
                       <td className="py-2 font-mono">{s.pseudonymCode}</td>
                       <td className="py-2">{s.classCode ?? '—'}</td>
                       <td className="py-2">{s.group === 'INTERVENTSIOON' ? 'Sekkumine' : 'Kontroll'}</td>
-                      <td className="py-2">
+                      <td className="py-2 text-center">
                         {s.excludedFromAnalysis ? (
-                          <span className="text-red-600">Väljajäetud</span>
-                        ) : consentGiven ? (
-                          <span className="text-green-600">Antud</span>
+                          <span title="Nõusolek tagasi võetud" className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
                         ) : (
-                          <span className="text-slate-400">Puudub</span>
+                          <StatusDot status={questionnaireStatus(token?.firstViewedAt, consentGiven)} />
                         )}
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 text-center">
                         <StatusDot status={questionnaireStatus(eelToken?.firstViewedAt, eelDone)} />
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 text-center">
                         <StatusDot status={questionnaireStatus(jarelToken?.firstViewedAt, jarelDone)} />
                       </td>
                       <td className="py-2 text-xs">

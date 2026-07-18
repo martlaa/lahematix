@@ -115,12 +115,12 @@ export function StatusDot({ status }: { status: QuestionnaireStatus }) {
   );
 }
 
-export function StatusLegend() {
+export function StatusLegend({ showWithdrawn }: { showWithdrawn?: boolean } = {}) {
   return (
-    <p className="text-xs text-slate-500 mb-4 flex items-center gap-4">
-      <span>Küsimustiku staatus:</span>
+    <p className="text-xs text-slate-500 mb-4 flex items-center gap-4 flex-wrap">
+      <span>Staatus:</span>
       <span className="inline-flex items-center gap-1">
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" /> lõpetatud
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" /> lõpetatud/antud
       </span>
       <span className="inline-flex items-center gap-1">
         <span className="inline-block h-2.5 w-2.5 rounded-full bg-yellow-400" /> alustatud, pooleli
@@ -128,6 +128,11 @@ export function StatusLegend() {
       <span className="inline-flex items-center gap-1">
         <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-200" /> pole alustatud
       </span>
+      {showWithdrawn && (
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> tagasi võetud
+        </span>
+      )}
     </p>
   );
 }

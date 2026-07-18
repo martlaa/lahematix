@@ -223,7 +223,7 @@ export default async function AdminPage({
                       <tr className="text-left text-slate-500">
                         <th className="py-1 font-normal">Õpetaja</th>
                         <th className="py-1 font-normal">Meetod</th>
-                        <th className="py-1 font-normal" title="Lisa 8 küsimustik">
+                        <th className="py-1 font-normal text-center" title="Lisa 8 küsimustik">
                           Küsimustik
                         </th>
                       </tr>
@@ -235,7 +235,7 @@ export default async function AdminPage({
                             {t.user.name} ({t.user.email})
                           </td>
                           <td className="py-1 text-slate-700">{t.method ?? 'valimata'}</td>
-                          <td className="py-1">
+                          <td className="py-1 text-center">
                             <StatusDot
                               status={questionnaireStatus(t.lisa8FirstViewedAt, t.user.questionnaireResponses.length > 0)}
                             />

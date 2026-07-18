@@ -17,6 +17,11 @@ export default async function OpilaneNousolekPage({ params }: { params: { token:
   const latest = student.consentRecords[0];
   const hasConsent = latest?.status === 'ANTUD';
 
+  if (!hasConsent && !invite.firstViewedAt) {
+    // Märgi ära, et link on avatud — annab õpetaja vaates "alustatud, kuid pooleli" signaali.
+    await prisma.inviteToken.update({ where: { id: invite.id }, data: { firstViewedAt: new Date() } });
+  }
+
   return (
     <FormShell
       title="Nõusolek uuringus osalemiseks"
