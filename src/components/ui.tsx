@@ -93,6 +93,45 @@ export function SecondaryLinkButton({
   );
 }
 
+export type QuestionnaireStatus = 'done' | 'started' | 'none';
+
+export function questionnaireStatus(viewedAt: Date | null | undefined, done: boolean): QuestionnaireStatus {
+  if (done) return 'done';
+  if (viewedAt) return 'started';
+  return 'none';
+}
+
+export function StatusDot({ status }: { status: QuestionnaireStatus }) {
+  const styles: Record<QuestionnaireStatus, { color: string; label: string }> = {
+    done: { color: 'bg-green-500', label: 'Lõpetatud' },
+    started: { color: 'bg-yellow-400', label: 'Alustatud, pooleli' },
+    none: { color: 'bg-slate-200', label: 'Pole alustatud' },
+  };
+  const { color, label } = styles[status];
+  return (
+    <span className="inline-flex items-center gap-1" title={label}>
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
+    </span>
+  );
+}
+
+export function StatusLegend() {
+  return (
+    <p className="text-xs text-slate-500 mb-4 flex items-center gap-4">
+      <span>Küsimustiku staatus:</span>
+      <span className="inline-flex items-center gap-1">
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" /> lõpetatud
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-yellow-400" /> alustatud, pooleli
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-200" /> pole alustatud
+      </span>
+    </p>
+  );
+}
+
 export function Alert({ kind, children }: { kind: 'success' | 'error' | 'info'; children: React.ReactNode }) {
   const styles = {
     success: 'bg-green-50 text-green-800 border-green-200',

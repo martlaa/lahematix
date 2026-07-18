@@ -21,10 +21,15 @@ export default async function OpetajaNousolekPage() {
       <Header userLabel={`${session.name} (õpetaja-uurija)`} />
       <FormShell title="Minu nõusolek" subtitle="LAHEMATE projekt — infoleht ja nõusolekuvorm õpetajale-uurijale (Lisa 2)">
         {hasConsent && (
-          <Alert kind="success">
-            Nõusolek on antud {latest?.givenAt.toLocaleDateString('et-EE')}. Saad allpool oma valikuid
-            muuta või nõusoleku täielikult tagasi võtta.
-          </Alert>
+          <>
+            <Alert kind="success">
+              Nõusolek on antud {latest?.givenAt.toLocaleDateString('et-EE')}. Saad allpool oma valikuid
+              muuta või nõusoleku täielikult tagasi võtta.
+            </Alert>
+            <a href="/opetaja" className="block mb-4 text-sm text-brand-600 underline hover:no-underline">
+              ← Tagasi töölauale
+            </a>
+          </>
         )}
 
         <div className="prose prose-sm max-w-none text-slate-700 mb-6 space-y-4">

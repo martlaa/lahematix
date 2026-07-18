@@ -2,7 +2,7 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Alert } from '@/components/ui';
+import { Alert, StatusDot, StatusLegend, questionnaireStatus } from '@/components/ui';
 
 export default async function AdminPage({
   searchParams,
@@ -13,7 +13,13 @@ export default async function AdminPage({
   if (!session.userId || session.role !== 'ADMIN') redirect('/login');
 
   const schools = await prisma.school.findMany({
-    include: { teachers: { include: { user: true } } },
+    include: {
+      teachers: {
+        include: {
+          user: { include: { questionnaireResponses: { where: { questionnaireCode: 'lisa8' } } } },
+        },
+      },
+    },
     orderBy: { name: 'asc' },
   });
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
@@ -209,17 +215,40 @@ export default async function AdminPage({
                   </form>
                 )}
 
-                <ul className="mt-2 text-sm text-slate-700 list-disc list-inside">
-                  {s.teachers.map((t) => (
-                    <li key={t.id}>
-                      {t.user.name} ({t.user.email}) — {t.method ?? 'meetod valimata'}
-                    </li>
-                  ))}
-                  {s.teachers.length === 0 && <li className="text-slate-400 list-none">Õpetajaid pole veel lisatud</li>}
-                </ul>
+                {s.teachers.length === 0 ? (
+                  <p className="mt-2 text-sm text-slate-400">Õpetajaid pole veel lisatud</p>
+                ) : (
+                  <table className="mt-2 w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-500">
+                        <th className="py-1 font-normal">Õpetaja</th>
+                        <th className="py-1 font-normal">Meetod</th>
+                        <th className="py-1 font-normal" title="Lisa 8 küsimustik">
+                          Küsimustik
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {s.teachers.map((t) => (
+                        <tr key={t.id}>
+                          <td className="py-1 text-slate-700">
+                            {t.user.name} ({t.user.email})
+                          </td>
+                          <td className="py-1 text-slate-700">{t.method ?? 'valimata'}</td>
+                          <td className="py-1">
+                            <StatusDot
+                              status={questionnaireStatus(t.lisa8FirstViewedAt, t.user.questionnaireResponses.length > 0)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             ))}
           </div>
+          {schools.some((s) => s.teachers.length > 0) && <StatusLegend />}
         </section>
 
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

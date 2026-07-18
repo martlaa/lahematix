@@ -2,7 +2,7 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Alert } from '@/components/ui';
+import { Alert, StatusDot, StatusLegend, questionnaireStatus } from '@/components/ui';
 
 export default async function OpilasedPage({
   searchParams,
@@ -19,7 +19,8 @@ export default async function OpilasedPage({
     where: { teacherId: teacher!.id },
     include: {
       consentRecords: { orderBy: { createdAt: 'desc' }, take: 1 },
-      inviteTokens: { where: { purpose: 'CONSENT' }, orderBy: { createdAt: 'desc' }, take: 1 },
+      inviteTokens: { orderBy: { createdAt: 'desc' } },
+      questionnaireResponses: true,
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -41,6 +42,10 @@ export default async function OpilasedPage({
     <>
       <Header userLabel={`${session.name} (õpetaja-uurija)`} />
       <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-6">
+        <a href="/opetaja" className="inline-block text-sm text-brand-600 underline hover:no-underline">
+          ← Tagasi töölauale
+        </a>
+
         {imported !== null && (
           <Alert kind={importErrors.length > 0 ? 'info' : 'success'}>
             <p>{imported} õpilast lisati edukalt CSV-failist.</p>
@@ -214,7 +219,8 @@ export default async function OpilasedPage({
         )}
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-4">Õpilaste nimekiri ({students.length})</h2>
+          <h2 className="font-semibold text-slate-900 mb-1">Õpilaste nimekiri ({students.length})</h2>
+          <StatusLegend />
           <form action="/api/opetaja/opilased/invite" method="post">
             <table className="w-full text-sm">
               <thead>
@@ -225,6 +231,12 @@ export default async function OpilasedPage({
                   <th className="py-1">Klass</th>
                   <th className="py-1">Rühm</th>
                   <th className="py-1">Nõusolek</th>
+                  <th className="py-1" title="Eelküsimustik">
+                    Eel
+                  </th>
+                  <th className="py-1" title="Järelküsimustik">
+                    Järel
+                  </th>
                   <th className="py-1">Link / vanem</th>
                   <th className="py-1"></th>
                 </tr>
@@ -233,7 +245,11 @@ export default async function OpilasedPage({
                 {students.map((s) => {
                   const consent = s.consentRecords[0];
                   const consentGiven = consent?.status === 'ANTUD';
-                  const token = s.inviteTokens[0];
+                  const token = s.inviteTokens.find((t) => t.purpose === 'CONSENT');
+                  const eelToken = s.inviteTokens.find((t) => t.purpose === 'QUESTIONNAIRE_EEL');
+                  const jarelToken = s.inviteTokens.find((t) => t.purpose === 'QUESTIONNAIRE_JAREL');
+                  const eelDone = s.questionnaireResponses.some((r) => r.questionnaireCode === 'lisa4-eel');
+                  const jarelDone = s.questionnaireResponses.some((r) => r.questionnaireCode === 'lisa4-jarel');
                   return (
                     <tr key={s.id} className="border-b border-slate-100 align-top">
                       <td className="py-2">
@@ -254,6 +270,12 @@ export default async function OpilasedPage({
                         ) : (
                           <span className="text-slate-400">Puudub</span>
                         )}
+                      </td>
+                      <td className="py-2">
+                        <StatusDot status={questionnaireStatus(eelToken?.firstViewedAt, eelDone)} />
+                      </td>
+                      <td className="py-2">
+                        <StatusDot status={questionnaireStatus(jarelToken?.firstViewedAt, jarelDone)} />
                       </td>
                       <td className="py-2 text-xs">
                         {s.isFifteenOrOlder ? (
@@ -284,7 +306,7 @@ export default async function OpilasedPage({
                 })}
                 {students.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-4 text-center text-slate-400">
+                    <td colSpan={10} className="py-4 text-center text-slate-400">
                       Õpilasi pole veel lisatud
                     </td>
                   </tr>

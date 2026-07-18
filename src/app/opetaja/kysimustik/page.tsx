@@ -43,15 +43,25 @@ export default async function OpetajaKysimustikPage() {
     where: { questionnaireCode_teacherUserId: { questionnaireCode: 'lisa8', teacherUserId: session.userId } },
   });
 
+  if (!existing && teacher && !teacher.lisa8FirstViewedAt) {
+    // Märgi ära, et vorm on avatud — annab adminile "alustatud, kuid pooleli" signaali.
+    await prisma.teacher.update({ where: { id: teacher.id }, data: { lisa8FirstViewedAt: new Date() } });
+  }
+
   return (
     <>
       <Header userLabel={`${session.name} (õpetaja-uurija)`} />
       <FormShell title={lisa8.title} subtitle={`${session.name} — ${teacher?.school.name ?? ''}`}>
         {existing ? (
-          <Alert kind="success">
-            Oled selle küsimustiku juba täitnud {existing.submittedAt.toLocaleDateString('et-EE')}. Täname
-            vastamast!
-          </Alert>
+          <>
+            <Alert kind="success">
+              Oled selle küsimustiku juba täitnud {existing.submittedAt.toLocaleDateString('et-EE')}. Täname
+              vastamast!
+            </Alert>
+            <a href="/opetaja" className="text-sm text-brand-600 underline hover:no-underline">
+              ← Tagasi töölauale
+            </a>
+          </>
         ) : (
           <QuestionnaireForm
             definition={lisa8}
