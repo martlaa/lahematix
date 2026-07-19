@@ -123,6 +123,8 @@ model Teacher {
   createdAt DateTime     @default(now())
 
   students Student[]
+  researchPlanEntries ResearchPlanEntry[]
+  journalEntries      JournalEntry[]
 }
 
 // --- Õpilased (ei ole User — token-põhine ligipääs, vt InviteToken) ---
@@ -276,6 +278,52 @@ model TestGrading {
   gradedByUserId   String
   gradedByUser     User           @relation(fields: [gradedByUserId], references: [id])
   gradedAt         DateTime       @default(now())
+}
+
+// --- Õpetaja isiklik uuringukava ja uurijapäevik (Faas 1 jätk, Lisa 7 + Lisa 10) ---
+// Uuringukava rida kirjeldab ühte plaanitud katsetundi; õpetaja lisab/muudab/
+// kustutab ridu ise jooksvalt (vt Lisa 10 juhis — tabel ei pea korraga täielik
+// olema). lessonPlanUrl on lihtne vaba tekst/link — valmisolek täieliku
+// tunnikavade (LessonPlan) funktsionaalsuse jaoks lisandub hiljem, praegu
+// piisab sellest väljast lingi jaoks, kui tunnikava on mujal juba olemas.
+
+model ResearchPlanEntry {
+  id                String    @id @default(cuid())
+  teacherId         String
+  teacher           Teacher   @relation(fields: [teacherId], references: [id])
+  date              DateTime
+  startTime         String? // kellaaeg, nt "10:15"
+  durationMin       Int?
+  studentGroup      String? // nt "5A"
+  appliedMethods    Method[]  @default([]) // selle tunni jooksul tegelikult rakendatud meetod(id)
+  topic             String?
+  lessonPlanUrl     String? // link tunnikavale, kui olemas — lisandub sageli hiljem
+  expectingObserver Boolean   @default(false)
+  observerName      String?
+  hidden            Boolean   @default(false) // "Peida"/"Taasta" — pehme peitmine, mitte kustutamine
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  journalEntry JournalEntry?
+
+  @@index([teacherId])
+}
+
+// Uurijapäeviku sissekanne (Lisa 7) — üks kindla katsetunni kohta, kirjutatakse
+// kohe pärast tundi. Sisu (9 Likert-väidet + Rolfe'i refleksioon) on hardcoded
+// src/lib/journal/-is, samamoodi nagu küsimustikud/testid. Õpetaja saab
+// sissekannet hiljem täiendada/muuta — submittedAt on esmase salvestuse aeg,
+// updatedAt uueneb iga muutmisega.
+
+model JournalEntry {
+  id                  String            @id @default(cuid())
+  researchPlanEntryId String            @unique
+  researchPlanEntry   ResearchPlanEntry @relation(fields: [researchPlanEntryId], references: [id])
+  teacherId           String
+  teacher             Teacher           @relation(fields: [teacherId], references: [id])
+  answersJson         String // { likert: { [domainKey.itemKey]: { value, comment? } }, rolfe: { what: [s1,s2,s3], soWhat, nowWhat } }
+  submittedAt         DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 // --- Audit log ---
