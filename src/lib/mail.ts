@@ -78,3 +78,14 @@ export function questionnaireInviteEmailHtml(params: { name: string; link: strin
     <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
   `;
 }
+
+export function testInviteEmailHtml(params: { name: string; link: string }) {
+  return `
+    <p>Tere, ${params.name}!</p>
+    <p>Palume Sul sooritada LAHEMATE projekti matemaatilise probleemilahenduse test. Testile on aega ette
+    nähtud, aga kiirustada pole vaja — vasta rahulikult.</p>
+    <p><a href="${params.link}">Ava test</a></p>
+    <p>Link on isiklik — palun ära jaga seda teistega.</p>
+    <p>Lugupidamisega,<br/>LAHEMATE projekti meeskond</p>
+  `;
+}

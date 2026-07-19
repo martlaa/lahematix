@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert, StatusDot, StatusLegend, questionnaireStatus } from '@/components/ui';
+import { getTestByGradeBand } from '@/lib/tests';
 
 export default async function OpilasedPage({
   searchParams,
@@ -15,12 +16,15 @@ export default async function OpilasedPage({
   const teacher = await prisma.teacher.findUnique({ where: { userId: session.userId } });
   if (!teacher) redirect('/opetaja');
 
+  const testDefinition = teacher!.gradeBand ? getTestByGradeBand(teacher!.gradeBand) : undefined;
+
   const students = await prisma.student.findMany({
     where: { teacherId: teacher!.id },
     include: {
       consentRecords: { orderBy: { createdAt: 'desc' }, take: 1 },
       inviteTokens: { orderBy: { createdAt: 'desc' } },
       questionnaireResponses: true,
+      testSubmissions: { include: { grading: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -210,6 +214,8 @@ export default async function OpilasedPage({
                 <option value="CONSENT">Nõusolek</option>
                 <option value="QUESTIONNAIRE_EEL">Eelküsimustik</option>
                 <option value="QUESTIONNAIRE_JAREL">Järelküsimustik</option>
+                <option value="TEST_EEL">Test eel</option>
+                <option value="TEST_JAREL">Test järel</option>
               </select>
               <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
                 Saada kutse klassile
@@ -220,6 +226,12 @@ export default async function OpilasedPage({
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-1">Õpilaste nimekiri ({students.length})</h2>
+          {!testDefinition && (
+            <Alert kind="info">
+              Testi veergude nägemiseks ja testikutsete saatmiseks määra töölaual ("Minu andmed" plokis) oma
+              vanuseaste.
+            </Alert>
+          )}
           <StatusLegend showWithdrawn />
           <form action="/api/opetaja/opilased/invite" method="post">
             <table className="w-full text-sm">
@@ -237,6 +249,12 @@ export default async function OpilasedPage({
                   <th className="py-1 text-center" title="Järelküsimustik">
                     Järel
                   </th>
+                  <th className="py-1 text-center" title="Test eel">
+                    Test eel
+                  </th>
+                  <th className="py-1 text-center" title="Test järel">
+                    Test järel
+                  </th>
                   <th className="py-1">Link / vanem</th>
                   <th className="py-1"></th>
                 </tr>
@@ -250,6 +268,14 @@ export default async function OpilasedPage({
                   const jarelToken = s.inviteTokens.find((t) => t.purpose === 'QUESTIONNAIRE_JAREL');
                   const eelDone = s.questionnaireResponses.some((r) => r.questionnaireCode === 'lisa4-eel');
                   const jarelDone = s.questionnaireResponses.some((r) => r.questionnaireCode === 'lisa4-jarel');
+                  const testEelToken = s.inviteTokens.find((t) => t.purpose === 'TEST_EEL');
+                  const testJarelToken = s.inviteTokens.find((t) => t.purpose === 'TEST_JAREL');
+                  const testEelSubmission = testDefinition
+                    ? s.testSubmissions.find((t) => t.testCode === testDefinition.code && t.phase === 'EEL')
+                    : undefined;
+                  const testJarelSubmission = testDefinition
+                    ? s.testSubmissions.find((t) => t.testCode === testDefinition.code && t.phase === 'JAREL')
+                    : undefined;
                   return (
                     <tr key={s.id} className="border-b border-slate-100 align-top">
                       <td className="py-2">
@@ -274,6 +300,48 @@ export default async function OpilasedPage({
                       </td>
                       <td className="py-2 text-center">
                         <StatusDot status={questionnaireStatus(jarelToken?.firstViewedAt, jarelDone)} />
+                      </td>
+                      <td className="py-2 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <StatusDot status={questionnaireStatus(testEelToken?.firstViewedAt, !!testEelSubmission)} />
+                          {testDefinition ? (
+                            testEelSubmission?.grading ? (
+                              <span className="text-xs text-slate-500">
+                                {testEelSubmission.grading.totalScore}/{testDefinition.maxScore}
+                              </span>
+                            ) : (
+                              <a
+                                href={`/opetaja/testi-hindamine/${s.id}/${testDefinition.code}/EEL`}
+                                className="text-xs text-brand-600 underline hover:no-underline"
+                              >
+                                Hinda →
+                              </a>
+                            )
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <StatusDot status={questionnaireStatus(testJarelToken?.firstViewedAt, !!testJarelSubmission)} />
+                          {testDefinition ? (
+                            testJarelSubmission?.grading ? (
+                              <span className="text-xs text-slate-500">
+                                {testJarelSubmission.grading.totalScore}/{testDefinition.maxScore}
+                              </span>
+                            ) : (
+                              <a
+                                href={`/opetaja/testi-hindamine/${s.id}/${testDefinition.code}/JAREL`}
+                                className="text-xs text-brand-600 underline hover:no-underline"
+                              >
+                                Hinda →
+                              </a>
+                            )
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2 text-xs">
                         {s.isFifteenOrOlder ? (
@@ -304,7 +372,7 @@ export default async function OpilasedPage({
                 })}
                 {students.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="py-4 text-center text-slate-400">
+                    <td colSpan={12} className="py-4 text-center text-slate-400">
                       Õpilasi pole veel lisatud
                     </td>
                   </tr>
@@ -317,6 +385,8 @@ export default async function OpilasedPage({
                   <option value="CONSENT">Nõusolek</option>
                   <option value="QUESTIONNAIRE_EEL">Eelküsimustik</option>
                   <option value="QUESTIONNAIRE_JAREL">Järelküsimustik</option>
+                  <option value="TEST_EEL">Test eel</option>
+                  <option value="TEST_JAREL">Test järel</option>
                 </select>
                 <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
                   Saada kutse/meeldetuletus valitud isikutele

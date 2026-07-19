@@ -59,6 +59,15 @@ enum InvitePurpose {
   CONSENT
   QUESTIONNAIRE_EEL
   QUESTIONNAIRE_JAREL
+  TEST_EEL
+  TEST_JAREL
+}
+
+// Faas 2: matemaatilise probleemilahenduse test. Sama test käib eel- ja
+// järelmõõtmisel (phase eristab neid), sisu on hardcoded src/lib/tests/-is.
+enum TestPhase {
+  EEL
+  JAREL
 }
 
 // --- Kasutajad (täiskasvanud rollid) ---
@@ -79,6 +88,7 @@ model User {
   auditLogs   AuditLog[]
   loginTokens LoginToken[]
   questionnaireResponses QuestionnaireResponse[]
+  testGradings TestGrading[]
 
   @@index([role])
 }
@@ -141,6 +151,7 @@ model Student {
   consentRecords ConsentRecord[]
   inviteTokens   InviteToken[]
   questionnaireResponses QuestionnaireResponse[]
+  testSubmissions TestSubmission[]
 }
 
 // --- Nõusolekud ---
@@ -220,6 +231,51 @@ model QuestionnaireResponse {
 
   @@unique([questionnaireCode, studentId])
   @@unique([questionnaireCode, teacherUserId])
+}
+
+// --- Matemaatilise probleemilahenduse test (Faas 2) ---
+// Testi sisu (ülesanded, valikvastused, hindamisjuhend) on hardcoded
+// src/lib/tests/-is, samamoodi nagu küsimustikud. Sama test käib eel- ja
+// järelmõõtmisel ning nii kontroll- kui katserühmale — phase eristab
+// mõõtmiskorda, testCode vanuseastet ("test-4-6" | "test-7-9" | "test-10-12").
+
+model TestSubmission {
+  id          String    @id @default(cuid())
+  testCode    String
+  phase       TestPhase
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  answersJson String? // null, kui ainult paberifotod; muidu { [probleemKey]: { [subKey]: { choice, explanation? } } }
+  submittedAt DateTime? // täidetud, kui õpilane ise veebis sooritas
+  createdAt   DateTime  @default(now())
+
+  photos  TestSubmissionPhoto[]
+  grading TestGrading?
+
+  @@unique([testCode, phase, studentId])
+}
+
+model TestSubmissionPhoto {
+  id               String         @id @default(cuid())
+  testSubmissionId String
+  testSubmission   TestSubmission @relation(fields: [testSubmissionId], references: [id])
+  filePath         String // suhteline tee privaatses uploads-kaustas
+  originalName     String
+  uploadedAt       DateTime       @default(now())
+
+  @@index([testSubmissionId])
+}
+
+model TestGrading {
+  id               String         @id @default(cuid())
+  testSubmissionId String         @unique
+  testSubmission   TestSubmission @relation(fields: [testSubmissionId], references: [id])
+  scoresJson       String // { [probleemKey]: { [subKey]: number } }
+  totalScore       Int
+  comment          String? // nähtav ainult õpetajale, teadurile ja adminile
+  gradedByUserId   String
+  gradedByUser     User           @relation(fields: [gradedByUserId], references: [id])
+  gradedAt         DateTime       @default(now())
 }
 
 // --- Audit log ---

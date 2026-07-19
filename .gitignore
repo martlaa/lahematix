@@ -6,3 +6,4 @@ node_modules/
 dev.db
 .claude/settings.local.json
 tsconfig.tsbuildinfo
+uploads/

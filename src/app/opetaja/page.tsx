@@ -35,6 +35,22 @@ export default async function OpetajaDashboard() {
             Meetod: {teacher?.method ?? 'valimata'} <br />
             Õpilasi nimekirjas: {teacher?.students.length ?? 0}
           </p>
+          <form action="/api/opetaja/gradeband" method="post" className="mt-3 flex items-center gap-2">
+            <label className="text-sm text-slate-700">Vanuseaste (testide jaoks):</label>
+            <select
+              name="gradeBand"
+              defaultValue={teacher?.gradeBand ?? ''}
+              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">— vali —</option>
+              <option value="4-6">4.–6. klass</option>
+              <option value="7-9">7.–9. klass</option>
+              <option value="10-12">10.–12. klass</option>
+            </select>
+            <button type="submit" className="text-xs text-brand-600 underline hover:no-underline">
+              Salvesta
+            </button>
+          </form>
         </div>
 
         <Link
