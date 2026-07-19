@@ -6,7 +6,6 @@ import { Alert } from '@/components/ui';
 import { LESSON_PART_TYPE_LABEL } from '@/lib/lessonplan/types';
 import {
   OBSERVATION_DOMAINS,
-  RATING_SCALE_LABELS,
   INCIDENT_CONSTRUCT_OPTIONS,
   type ObservationRatings,
   type IncidentLogRow,
@@ -16,29 +15,28 @@ import {
 const INCIDENT_ROW_COUNT = 8;
 const RATING_VALUES = [1, 2, 3, 4];
 
-export default async function VaatlusProtokollPage({ params }: { params: { planEntryId: string } }) {
+export default async function TeadurVaatlusprotokollKatsetusPage({ params }: { params: { id: string } }) {
   const session = await getSession();
-  if (!session.userId || (session.role !== 'OPETAJA' && session.role !== 'TEADUR')) redirect('/login');
+  if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 
-  const entry = await prisma.researchPlanEntry.findUnique({
-    where: { id: params.planEntryId },
-    include: {
-      teacher: { include: { user: true, school: true } },
-      lessonPlan: { include: { parts: { orderBy: { order: 'asc' } } } },
-    },
+  const plan = await prisma.sampleLessonPlan.findUnique({
+    where: { id: params.id },
+    include: { parts: { orderBy: { order: 'asc' } } },
   });
-  if (!entry || entry.observerUserId !== session.userId) notFound();
-  if (!entry.lessonPlan) notFound();
+  if (!plan || plan.authorUserId !== session.userId) notFound();
 
-  const parts = entry.lessonPlan.parts;
+  const parts = plan.parts;
+  const instrumentCode = `lisa6:${plan.id}`;
 
-  const protocol = await prisma.observationProtocol.findUnique({
-    where: { lessonPlanId_observerUserId: { lessonPlanId: entry.lessonPlan.id, observerUserId: session.userId } },
+  const trial = await prisma.instrumentTrial.findUnique({
+    where: { authorUserId_instrumentCode: { authorUserId: session.userId, instrumentCode } },
   });
 
-  const ratings: ObservationRatings = protocol?.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
-  const incidents: IncidentLogRow[] = protocol?.incidentsJson ? JSON.parse(protocol.incidentsJson) : [];
-  const summary: Partial<ObservationSummary> = protocol?.summaryJson ? JSON.parse(protocol.summaryJson) : {};
+  const stored: { ratings?: ObservationRatings; incidents?: IncidentLogRow[]; summary?: Partial<ObservationSummary> } =
+    trial?.answersJson ? JSON.parse(trial.answersJson) : {};
+  const ratings = stored.ratings ?? {};
+  const incidents = stored.incidents ?? [];
+  const summary = stored.summary ?? {};
 
   const incidentRows: IncidentLogRow[] = Array.from({ length: INCIDENT_ROW_COUNT }, (_, i) => ({
     timeMin: incidents[i]?.timeMin ?? '',
@@ -49,34 +47,31 @@ export default async function VaatlusProtokollPage({ params }: { params: { planE
 
   return (
     <>
-      <Header userLabel={`${session.name} (${session.role === 'TEADUR' ? 'teadur' : 'õpetaja-uurija'})`} />
+      <Header userLabel={`${session.name} (teadur)`} />
       <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-6">
-        <a href={`/vaatlused/${entry.id}`} className="inline-block text-sm text-brand-600 underline hover:no-underline">
-          ← Tagasi tunnikava juurde
+        <a
+          href="/teadur/instrumendid/vaatlusprotokoll"
+          className="inline-block text-sm text-brand-600 underline hover:no-underline"
+        >
+          ← Tagasi valiku juurde
         </a>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h1 className="text-xl font-semibold text-slate-900">Tunnivaatlusprotokoll</h1>
-          <p className="text-sm text-slate-600 mt-2">
-            Õpetaja: {entry.teacher.user.name} ({entry.teacher.school.name}) <br />
-            Kuupäev: {entry.date.toLocaleDateString('et-EE')} <br />
-            Tunni teema: {entry.topic ?? '—'}
-          </p>
-          {protocol?.submittedAt && (
-            <Alert kind={protocol.publishedAt ? 'success' : 'info'}>
-              {protocol.publishedAt
-                ? `Avalikustatud õpetajale ${protocol.publishedAt.toLocaleDateString('et-EE')}. Muudatused on kohe nähtavad.`
-                : `Salvestasid mustandi esmakordselt ${protocol.submittedAt.toLocaleDateString('et-EE')}. Õpetaja ei näe seda enne avalikustamist.`}{' '}
-              Vorm on eeltäidetud senise sisuga — saad seda täiendada.
+          <h1 className="text-xl font-semibold text-slate-900">Tunnivaatlusprotokoll (katsetus)</h1>
+          <p className="text-sm text-slate-600 mt-2">Näidistund: {plan.topic ?? '(teema määramata)'}</p>
+          {trial?.submittedAt && (
+            <Alert kind="info">
+              Katsetasid seda protokolli esmakordselt {trial.submittedAt.toLocaleDateString('et-EE')}. Vorm on
+              eeltäidetud senise sisuga.
             </Alert>
           )}
         </div>
 
         {parts.length === 0 ? (
-          <Alert kind="error">Sellel tunnikaval pole veel ühtegi tunniosa — õpetaja peab need enne lisama.</Alert>
+          <Alert kind="error">Sellel näidistunnil pole tunniosi.</Alert>
         ) : (
-          <form action="/api/vaatlused/protokoll" method="post" className="space-y-6">
-            <input type="hidden" name="planEntryId" value={entry.id} />
+          <form action="/api/teadur/instrumendid/vaatlusprotokoll" method="post" className="space-y-6">
+            <input type="hidden" name="sampleLessonPlanId" value={plan.id} />
 
             {parts.map((p, idx) => {
               const checkpointRatings = ratings[p.id] ?? {};
@@ -141,8 +136,7 @@ export default async function VaatlusProtokollPage({ params }: { params: { planE
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
               <h2 className="font-semibold text-slate-900 mb-1">Intsidentide ja tähelepanekute logi</h2>
               <p className="text-xs text-slate-500 mb-4">
-                Kirjuta üles märkimisväärsed hetked, mis struktureeritud hinnangutesse ei mahu. Konstrukti
-                lühikoodid: {INCIDENT_CONSTRUCT_OPTIONS.join(' / ')}.
+                Konstrukti lühikoodid: {INCIDENT_CONSTRUCT_OPTIONS.join(' / ')}.
               </p>
               <table className="w-full text-xs min-w-[700px]">
                 <thead>
@@ -213,7 +207,7 @@ export default async function VaatlusProtokollPage({ params }: { params: { planE
               </label>
               <label className="block">
                 <span className="block text-sm font-medium text-slate-700 mb-1">
-                  Kas ja kuidas tund järgis kavandatud meetodi põhivõtteid? Too seos tunnikavaga.
+                  Kas ja kuidas tund järgis kavandatud meetodi põhivõtteid?
                 </span>
                 <textarea
                   name="methodFidelity"
@@ -232,9 +226,7 @@ export default async function VaatlusProtokollPage({ params }: { params: { planE
                 />
               </label>
               <label className="block">
-                <span className="block text-sm font-medium text-slate-700 mb-1">
-                  Soovitused õpetajale ja/või projekti meeskonnale
-                </span>
+                <span className="block text-sm font-medium text-slate-700 mb-1">Soovitused</span>
                 <textarea
                   name="recommendations"
                   defaultValue={summary.recommendations ?? ''}
@@ -242,32 +234,9 @@ export default async function VaatlusProtokollPage({ params }: { params: { planE
                   className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
                 />
               </label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="submit"
-                  name="publish"
-                  value="0"
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  {protocol?.publishedAt ? 'Salvesta' : 'Salvesta mustandina'}
-                </button>
-                {!protocol?.publishedAt && (
-                  <button
-                    type="submit"
-                    name="publish"
-                    value="1"
-                    className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
-                  >
-                    Avalikusta õpetajale
-                  </button>
-                )}
-              </div>
-              {!protocol?.publishedAt && (
-                <p className="text-xs text-slate-500">
-                  Mustand on nähtav ainult sulle. Avalikustamine muudab protokolli püsivalt nähtavaks ka tundi
-                  läbi viinud õpetajale.
-                </p>
-              )}
+              <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                Salvesta
+              </button>
             </div>
           </form>
         )}

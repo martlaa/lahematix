@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
+import { Alert } from '@/components/ui';
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -48,18 +49,68 @@ export default async function TeadurDashboard() {
     orderBy: { name: 'asc' },
   });
 
+  const twoWeeksOut = new Date();
+  twoWeeksOut.setDate(twoWeeksOut.getDate() + 14);
+  const unbookedLessons = await prisma.researchPlanEntry.findMany({
+    where: {
+      expectingObserver: true,
+      observerUserId: null,
+      hidden: false,
+      date: { gte: new Date(), lte: twoWeeksOut },
+    },
+    include: { teacher: { include: { user: true, school: true } } },
+    orderBy: { date: 'asc' },
+  });
+
   return (
     <>
       <Header userLabel={`${session.name} (teadur)`} />
       <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-8">
+        {unbookedLessons.length > 0 && (
+          <Alert kind="info">
+            <p className="font-medium mb-1">Need tunnid ootavad veel vaatlejat:</p>
+            <ul className="space-y-1">
+              {unbookedLessons.map((e) => (
+                <li key={e.id}>
+                  Õpetaja {e.teacher.user.name} tund {e.date.toLocaleDateString('et-EE')} kuupäeval{' '}
+                  {e.teacher.school.name} koolis ootab vaatlejat — kas saaksid ennast pakkuda?
+                </li>
+              ))}
+            </ul>
+            <a href="/vaatlused" className="underline hover:no-underline">
+              Ava tunnivaatluste broneerimise tabel
+            </a>
+          </Alert>
+        )}
+
         <Link
           href="/vaatlused"
           className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
         >
-          <h2 className="font-semibold text-slate-900">Minu vaatlused</h2>
+          <h2 className="font-semibold text-slate-900">Minu tunnivaatlused</h2>
           <p className="text-sm text-slate-600 mt-1">
-            Katsetunnid, kus oled õpetajale-uurijale vaatlejaks määratud — tunnikava, kommentaarid ja
-            vaatlusprotokoll.
+            Broneeri end õpetaja-uurija tunni vaatlejaks või vaata oma juba broneeritud tunnivaatlusi.
+          </p>
+        </Link>
+
+        <Link
+          href="/teadur/naidistunnikavad"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">Minu näidistunnid</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Koosta näidistunnikavu, mida õpetajad-uurijad näevad eeskujuna oma tunnikava koostamisel.
+          </p>
+        </Link>
+
+        <Link
+          href="/teadur/instrumendid"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">Uuringu andmekogumisinstrumendid</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Katseta ise kõiki uuringus kasutatavaid instrumente — küsimustikud, uurijapäevik, testid ja
+            tunnivaatlusprotokoll.
           </p>
         </Link>
 

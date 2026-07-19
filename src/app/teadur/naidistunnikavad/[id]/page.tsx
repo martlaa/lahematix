@@ -1,6 +1,5 @@
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
-import type { Prisma } from '@prisma/client';
 import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert } from '@/components/ui';
@@ -12,133 +11,103 @@ import {
   type MaterialsAnswers,
 } from '@/lib/lessonplan/types';
 
-const METHOD_LABEL: Record<string, string> = {
-  BOALER: 'Boaler',
-  LILJEDAHL: 'Liljedahl',
-  TOH: 'Toh',
-};
+const METHOD_OPTIONS = [
+  { value: 'BOALER', letter: 'B', label: 'Boaler' },
+  { value: 'LILJEDAHL', letter: 'L', label: 'Liljedahl' },
+  { value: 'TOH', letter: 'T', label: 'Toh' },
+] as const;
 
-export default async function OpetajaTunnikavaPage({
+export default async function TeadurNaidistunnikavaPage({
   params,
   searchParams,
 }: {
-  params: { planEntryId: string };
+  params: { id: string };
   searchParams: { error?: string };
 }) {
   const session = await getSession();
-  if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
+  if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 
-  const teacher = await prisma.teacher.findUnique({ where: { userId: session.userId } });
-  if (!teacher) redirect('/opetaja');
-
-  const planEntry = await prisma.researchPlanEntry.findUnique({
-    where: { id: params.planEntryId },
-    include: {
-      observerUser: true,
-      lessonPlan: {
-        include: {
-          parts: { orderBy: { order: 'asc' } },
-          comments: { include: { authorUser: true }, orderBy: { createdAt: 'asc' } },
-        },
-      },
-    },
+  const plan = await prisma.sampleLessonPlan.findUnique({
+    where: { id: params.id },
+    include: { parts: { orderBy: { order: 'asc' } } },
   });
-  if (!planEntry || planEntry.teacherId !== teacher!.id) notFound();
+  if (!plan || plan.authorUserId !== session.userId) notFound();
 
-  const parts = planEntry!.lessonPlan?.parts ?? [];
+  const parts = plan.parts;
   const durationSum = parts.reduce((sum, p) => sum + p.durationMin, 0);
-  const durationMismatch =
-    planEntry!.durationMin != null && parts.length > 0 && durationSum !== planEntry!.durationMin;
-
-  const materials: MaterialsAnswers = planEntry!.lessonPlan?.materialsJson
-    ? JSON.parse(planEntry!.lessonPlan.materialsJson)
-    : {};
-
-  let matchingSamples: Prisma.SampleLessonPlanGetPayload<{ include: { authorUser: true; parts: true } }>[] = [];
-  if (teacher!.gradeBand) {
-    const candidates = await prisma.sampleLessonPlan.findMany({
-      where: { hidden: false, gradeBand: teacher!.gradeBand },
-      include: { authorUser: true, parts: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    const entryTopic = (planEntry!.topic ?? '').trim().toLowerCase();
-    matchingSamples = candidates.filter((s) => {
-      const methodMatch = s.appliedMethods.some((m) => planEntry!.appliedMethods.includes(m));
-      const sampleTopic = (s.topic ?? '').trim().toLowerCase();
-      const topicMatch = Boolean(entryTopic) && Boolean(sampleTopic) && (entryTopic.includes(sampleTopic) || sampleTopic.includes(entryTopic));
-      return methodMatch || topicMatch;
-    });
-  }
+  const durationMismatch = plan.durationMin != null && parts.length > 0 && durationSum !== plan.durationMin;
+  const materials: MaterialsAnswers = plan.materialsJson ? JSON.parse(plan.materialsJson) : {};
 
   return (
     <>
-      <Header userLabel={`${session.name} (õpetaja-uurija)`} />
+      <Header userLabel={`${session.name} (teadur)`} />
       <main className="max-w-3xl mx-auto w-full px-4 py-8 space-y-6">
-        <a href="/opetaja/uuringukava" className="inline-block text-sm text-brand-600 underline hover:no-underline">
-          ← Tagasi uuringukavva
+        <a href="/teadur/naidistunnikavad" className="inline-block text-sm text-brand-600 underline hover:no-underline">
+          ← Tagasi näidistundide juurde
         </a>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h1 className="text-xl font-semibold text-slate-900">Tunnikava</h1>
-          <p className="text-sm text-slate-600 mt-2">
-            Kuupäev: {planEntry!.date.toLocaleDateString('et-EE')} <br />
-            Algusaeg: {planEntry!.startTime ?? '—'} <br />
-            Kestus: {planEntry!.durationMin ? `${planEntry!.durationMin} min` : '—'} <br />
-            Klass/rühm: {planEntry!.studentGroup ?? '—'} <br />
-            Meetod: {teacher!.method ? METHOD_LABEL[teacher!.method] : '—'} <br />
-            Tunni teema: {planEntry!.topic ?? '—'}
-          </p>
+          <h1 className="text-xl font-semibold text-slate-900 mb-3">Näidistunni metaandmed</h1>
+          <form action="/api/teadur/naidistunnikava/update" method="post" className="grid grid-cols-2 gap-3">
+            <input type="hidden" name="id" value={plan.id} />
+            <select
+              name="gradeBand"
+              defaultValue={plan.gradeBand ?? ''}
+              required
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">— vali vanuseaste —</option>
+              <option value="4-6">4.–6. klass</option>
+              <option value="7-9">7.–9. klass</option>
+              <option value="10-12">10.–12. klass</option>
+            </select>
+            <input
+              type="number"
+              name="durationMin"
+              defaultValue={plan.durationMin ?? undefined}
+              placeholder="Kestus (min)"
+              min="1"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <div className="col-span-2 flex items-center gap-4 text-sm text-slate-700">
+              <span className="text-slate-500">Meetod:</span>
+              {METHOD_OPTIONS.map((m) => (
+                <label key={m.value} className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    name="appliedMethods"
+                    value={m.value}
+                    defaultChecked={plan.appliedMethods.includes(m.value)}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+            <input
+              type="text"
+              name="topic"
+              defaultValue={plan.topic ?? ''}
+              placeholder="Tunni teema"
+              className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <button className="col-span-2 rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+              Salvesta
+            </button>
+          </form>
         </div>
-
-        {matchingSamples.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
-            <h2 className="font-semibold text-slate-900 mb-1">Näidistunnikavad eeskujuks</h2>
-            <p className="text-xs text-slate-500 mb-3">
-              Teadurite koostatud näidistunnid, millel on sinuga sama vanuseaste ning sama teema või meetod.
-            </p>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-200">
-                  <th className="py-1 pr-2">Autor</th>
-                  <th className="py-1 pr-2">Meetod</th>
-                  <th className="py-1 pr-2">Teema</th>
-                  <th className="py-1 pr-2">Tunniosi</th>
-                  <th className="py-1 pr-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {matchingSamples.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-100">
-                    <td className="py-2 pr-2">{s.authorUser.name}</td>
-                    <td className="py-2 pr-2">
-                      {s.appliedMethods.map((m) => METHOD_LABEL[m]).join(', ') || '—'}
-                    </td>
-                    <td className="py-2 pr-2">{s.topic ?? '—'}</td>
-                    <td className="py-2 pr-2">{s.parts.length}</td>
-                    <td className="py-2 pr-2">
-                      <a href={`/opetaja/naidistunnikava/${s.id}`} className="text-brand-600 underline hover:no-underline">
-                        Vaata
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
 
         {searchParams.error === 'max_parts' && (
           <Alert kind="error">Tunniosi saab olla kuni {MAX_PARTS}. Eemalda mõni osa enne uue lisamist.</Alert>
         )}
         {durationMismatch && (
           <Alert kind="error">
-            Tunniosade kestuste summa ({durationSum} min) ei vasta tunni kogukestusele (
-            {planEntry!.durationMin} min).
+            Tunniosade kestuste summa ({durationSum} min) ei vasta märgitud kogukestusele ({plan.durationMin} min).
           </Alert>
         )}
         {parts.length > 0 && parts.length < MIN_PARTS && (
           <Alert kind="info">
-            Soovituslikult peaks tunnikavas olema vähemalt {MIN_PARTS} tunniosa — hetkel on lisatud {parts.length}.
+            Soovituslikult peaks näidistunnis olema vähemalt {MIN_PARTS} tunniosa — hetkel on lisatud {parts.length}.
           </Alert>
         )}
 
@@ -148,7 +117,7 @@ export default async function OpetajaTunnikavaPage({
             <p className="text-sm text-slate-400 mb-4">Tunniosi pole veel lisatud.</p>
           ) : (
             <form className="mb-6">
-              <table className="w-full text-xs min-w-[720px]">
+              <table className="w-full text-xs min-w-[640px]">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-200">
                     <th className="py-1 pr-2">#</th>
@@ -156,7 +125,6 @@ export default async function OpetajaTunnikavaPage({
                     <th className="py-1 pr-2">Tüüp</th>
                     <th className="py-1 pr-2">Kestus</th>
                     <th className="py-1 pr-2">Lühikirjeldus</th>
-                    <th className="py-1 pr-2">Vaatlejale</th>
                     <th className="py-1"></th>
                   </tr>
                 </thead>
@@ -200,16 +168,7 @@ export default async function OpetajaTunnikavaPage({
                           name={`description.${p.id}`}
                           defaultValue={p.description ?? ''}
                           rows={2}
-                          className="w-40 rounded border border-slate-300 px-1 py-1 text-xs"
-                        />
-                      </td>
-                      <td className="py-2 pr-2">
-                        <textarea
-                          name={`observerNote.${p.id}`}
-                          defaultValue={p.observerNote ?? ''}
-                          rows={2}
-                          placeholder="valikuline"
-                          className="w-32 rounded border border-slate-300 px-1 py-1 text-xs"
+                          className="w-56 rounded border border-slate-300 px-1 py-1 text-xs"
                         />
                       </td>
                       <td className="py-2 space-y-1">
@@ -217,7 +176,7 @@ export default async function OpetajaTunnikavaPage({
                           type="submit"
                           name="id"
                           value={p.id}
-                          formAction="/api/opetaja/tunnikava/osa/update"
+                          formAction="/api/teadur/naidistunnikava/osa/update"
                           className="block text-brand-600 underline hover:no-underline"
                         >
                           Salvesta
@@ -226,7 +185,7 @@ export default async function OpetajaTunnikavaPage({
                           type="submit"
                           name="id"
                           value={p.id}
-                          formAction="/api/opetaja/tunnikava/osa/delete"
+                          formAction="/api/teadur/naidistunnikava/osa/delete"
                           className="block text-red-600 underline hover:no-underline"
                         >
                           Eemalda
@@ -240,8 +199,8 @@ export default async function OpetajaTunnikavaPage({
           )}
 
           {parts.length < MAX_PARTS ? (
-            <form action="/api/opetaja/tunnikava/osa" method="post" className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
-              <input type="hidden" name="planEntryId" value={planEntry!.id} />
+            <form action="/api/teadur/naidistunnikava/osa" method="post" className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+              <input type="hidden" name="sampleLessonPlanId" value={plan.id} />
               <input
                 type="text"
                 name="title"
@@ -271,12 +230,6 @@ export default async function OpetajaTunnikavaPage({
                 placeholder="Lühikirjeldus (1–3 lauset)"
                 className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               />
-              <input
-                type="text"
-                name="observerNote"
-                placeholder="Vaatlejale (valikuline)"
-                className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-              />
               <button className="col-span-2 rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
                 Lisa tunniosa
               </button>
@@ -290,8 +243,8 @@ export default async function OpetajaTunnikavaPage({
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-3">Kasutatav õppevara ja kodutöö</h2>
-          <form action="/api/opetaja/tunnikava/lisainfo" method="post" className="space-y-3 text-sm">
-            <input type="hidden" name="planEntryId" value={planEntry!.id} />
+          <form action="/api/teadur/naidistunnikava/lisainfo" method="post" className="space-y-3 text-sm">
+            <input type="hidden" name="sampleLessonPlanId" value={plan.id} />
             {MATERIAL_OPTIONS.map((m) => (
               <div key={m.key} className="flex items-center gap-2">
                 <input
@@ -314,7 +267,7 @@ export default async function OpetajaTunnikavaPage({
               <label className="block text-sm font-medium text-slate-700 mb-1">Kodutöö lühikirjeldus</label>
               <textarea
                 name="homeworkText"
-                defaultValue={planEntry!.lessonPlan?.homeworkText ?? ''}
+                defaultValue={plan.homeworkText ?? ''}
                 rows={2}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               />
@@ -322,7 +275,7 @@ export default async function OpetajaTunnikavaPage({
                 <input
                   type="checkbox"
                   name="homeworkRelated"
-                  defaultChecked={planEntry!.lessonPlan?.homeworkRelated ?? false}
+                  defaultChecked={plan.homeworkRelated}
                   className="h-4 w-4 rounded border-slate-300"
                 />
                 Kodutöö on otseselt seotud tänase tunni teemaga
@@ -333,29 +286,6 @@ export default async function OpetajaTunnikavaPage({
             </button>
           </form>
         </div>
-
-        {planEntry!.observerUser && planEntry!.lessonPlan && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-900 mb-3">
-              Vaatleja ({planEntry!.observerUser.name}) kommentaarid
-            </h2>
-            {planEntry!.lessonPlan.comments.length === 0 ? (
-              <p className="text-sm text-slate-400">Kommentaare pole veel lisatud.</p>
-            ) : (
-              <ul className="space-y-2">
-                {planEntry!.lessonPlan.comments.map((c) => (
-                  <li key={c.id} className="text-sm text-slate-700 border-b border-slate-100 pb-2">
-                    <span className="text-slate-500">
-                      [{c.timing === 'ENNE' ? 'enne tundi' : 'pärast tundi'}] {c.authorUser.name},{' '}
-                      {c.createdAt.toLocaleString('et-EE')}:
-                    </span>{' '}
-                    {c.text}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
       </main>
     </>
   );

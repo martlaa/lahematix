@@ -108,6 +108,8 @@ model User {
   observedEntries       ResearchPlanEntry[]   @relation("Observer")
   lessonPlanComments    LessonPlanComment[]
   observationProtocols  ObservationProtocol[]
+  sampleLessonPlans     SampleLessonPlan[]
+  instrumentTrials      InstrumentTrial[]
 
   @@index([role])
 }
@@ -396,6 +398,7 @@ model ObservationProtocol {
   incidentsJson  String? // [{ timeMin, description, construct, whoWith }]
   summaryJson    String? // { shortSummary, methodFidelity, surprises, recommendations }
   submittedAt    DateTime?
+  publishedAt    DateTime? // täidetud alles siis, kui vaatleja otsustab protokolli õpetajale nähtavaks teha
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -417,6 +420,70 @@ model JournalEntry {
   answersJson         String // { likert: { [domainKey.itemKey]: { value, comment? } }, rolfe: { what: [s1,s2,s3], soWhat, nowWhat } }
   submittedAt         DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+}
+
+// Teaduri näidistunnikava — sama tunniosade struktuur mis õpetaja tunnikaval
+// (Lisa 11), aga ilma kooli/kuupäeva kontekstita, kuna teadur ei vii ise
+// tundi läbi. Eesmärk on pakkuda õpetajatele nende endi tunnikava koostamisel
+// eeskuju sama vanuseastme, meetodi või teema kohta.
+
+model SampleLessonPlan {
+  id              String   @id @default(cuid())
+  authorUserId    String
+  authorUser      User     @relation(fields: [authorUserId], references: [id])
+  gradeBand       String? // "4-6" | "7-9" | "10-12"
+  appliedMethods  Method[] @default([])
+  topic           String?
+  durationMin     Int?
+  materialsJson   String?
+  homeworkText    String?
+  homeworkRelated Boolean  @default(false)
+  hidden          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  parts SampleLessonPlanPart[]
+
+  @@index([authorUserId])
+}
+
+model SampleLessonPlanPart {
+  id                 String           @id @default(cuid())
+  sampleLessonPlanId String
+  sampleLessonPlan   SampleLessonPlan @relation(fields: [sampleLessonPlanId], references: [id])
+  order              Int
+  title              String
+  type               LessonPartType
+  durationMin        Int
+  description        String?
+
+  @@index([sampleLessonPlanId])
+}
+
+// Teaduri instrumendikatsetus — võimaldab teaduril iga uuringus kasutatava
+// instrumendi (küsimustikud, uurijapäevik, testid, tunnivaatlusprotokoll) ise
+// läbi katsetada, ilma et see saastaks päris uuringuandmestikku (Student/
+// Teacher-põhiseid mudeleid). instrumentCode kannab konteksti: enamiku
+// instrumentide puhul on see lihtsalt olemasolev sisukood ("lisa4-eel",
+// "lisa8", "test-7-9" jne), tunnivaatlusprotokolli puhul on lisatud
+// näidistunnikava id ("lisa6:<sampleLessonPlanId>"), kuna checkpointid
+// tulevad dünaamiliselt sellest näidistunnist.
+
+model InstrumentTrial {
+  id             String    @id @default(cuid())
+  authorUserId   String
+  authorUser     User      @relation(fields: [authorUserId], references: [id])
+  instrumentCode String
+  answersJson    String?
+  gradingJson    String? // ainult testide jaoks
+  totalScore     Int? // ainult testide jaoks
+  gradingComment String? // ainult testide jaoks
+  submittedAt    DateTime?
+  gradedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([authorUserId, instrumentCode])
 }
 
 // --- Audit log ---

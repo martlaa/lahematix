@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
     where: { lessonPlanId_observerUserId: { lessonPlanId: lessonPlan.id, observerUserId: session.userId } },
   });
 
+  const shouldPublish = form.get('publish') === '1';
+  // avalikustamine on ühesuunaline — kord õpetajale nähtavaks tehtud, ei lähe tagasi mustandiks
+  const publishedAt = existing?.publishedAt ?? (shouldPublish ? new Date() : null);
+
   await prisma.observationProtocol.upsert({
     where: { lessonPlanId_observerUserId: { lessonPlanId: lessonPlan.id, observerUserId: session.userId } },
     update: {
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
       incidentsJson: JSON.stringify(incidents),
       summaryJson: JSON.stringify(summary),
       submittedAt: existing?.submittedAt ?? new Date(),
+      publishedAt,
     },
     create: {
       lessonPlanId: lessonPlan.id,
@@ -77,13 +82,18 @@ export async function POST(req: NextRequest) {
       incidentsJson: JSON.stringify(incidents),
       summaryJson: JSON.stringify(summary),
       submittedAt: new Date(),
+      publishedAt,
     },
   });
 
   await prisma.auditLog.create({
     data: {
       actorId: session.userId,
-      action: existing ? 'OBSERVATION_PROTOCOL_UPDATE' : 'OBSERVATION_PROTOCOL_SUBMIT',
+      action: !existing
+        ? 'OBSERVATION_PROTOCOL_SUBMIT'
+        : shouldPublish && !existing?.publishedAt
+          ? 'OBSERVATION_PROTOCOL_PUBLISH'
+          : 'OBSERVATION_PROTOCOL_UPDATE',
       entity: 'ResearchPlanEntry',
       entityId: planEntryId,
     },

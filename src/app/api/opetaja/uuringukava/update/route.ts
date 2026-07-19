@@ -34,15 +34,7 @@ export async function POST(req: NextRequest) {
     VALID_METHODS.includes(m as Method),
   );
 
-  const observerUserIdRaw = String(form.get(`observerUserId.${id}`) ?? '').trim();
-  const observerUserId = observerUserIdRaw
-    ? (
-        await prisma.user.findFirst({
-          where: { id: observerUserIdRaw, role: { in: ['OPETAJA', 'TEADUR'] }, status: 'ACTIVE' },
-          select: { id: true },
-        })
-      )?.id ?? null
-    : null;
+  const expectingObserver = form.get(`expectingObserver.${id}`) === 'on';
 
   await prisma.researchPlanEntry.update({
     where: { id },
@@ -53,8 +45,9 @@ export async function POST(req: NextRequest) {
       studentGroup: String(form.get(`studentGroup.${id}`) ?? '').trim() || null,
       appliedMethods,
       topic: String(form.get(`topic.${id}`) ?? '').trim() || null,
-      expectingObserver: form.get(`expectingObserver.${id}`) === 'on',
-      observerUserId,
+      expectingObserver,
+      // kui õpetaja lülitab "ootan vaatlejat" välja, kaotab olemasolev broneering mõtte
+      observerUserId: expectingObserver ? undefined : null,
     },
   });
 

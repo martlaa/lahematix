@@ -18,13 +18,12 @@ export default async function OpetajaUuringukavaPage() {
 
   const entries = await prisma.researchPlanEntry.findMany({
     where: { teacherId: teacher!.id },
-    include: { journalEntry: true, lessonPlan: true, observerUser: true },
+    include: {
+      journalEntry: true,
+      observerUser: true,
+      lessonPlan: { include: { observationProtocols: { where: { publishedAt: { not: null } } } } },
+    },
     orderBy: { date: 'asc' },
-  });
-
-  const observerOptions = await prisma.user.findMany({
-    where: { role: { in: ['OPETAJA', 'TEADUR'] }, id: { not: session.userId }, status: 'ACTIVE' },
-    orderBy: { name: 'asc' },
   });
 
   return (
@@ -91,22 +90,11 @@ export default async function OpetajaUuringukavaPage() {
               placeholder="Tunni teema"
               className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             />
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-slate-700 col-span-2 md:col-span-4">
               <input type="checkbox" name="expectingObserver" className="h-4 w-4 rounded border-slate-300" />
-              Ootan vaatlejat
+              Ootan vaatlejat — rida ilmub tunnivaatluste broneerimise tabelisse, kus kolleegid saavad end
+              vaatlejaks märkida
             </label>
-            <select
-              name="observerUserId"
-              defaultValue=""
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">— vali vaatleja (kui teada) —</option>
-              {observerOptions.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role === 'TEADUR' ? 'teadur' : 'õpetaja'})
-                </option>
-              ))}
-            </select>
             <button className="col-span-2 md:col-span-4 rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
               Lisa rida
             </button>
@@ -135,6 +123,7 @@ export default async function OpetajaUuringukavaPage() {
                     <th className="py-1 pr-2">Vaatleja</th>
                     <th className="py-1 pr-2"></th>
                     <th className="py-1 pr-2 text-center">Uurijapäevik</th>
+                    <th className="py-1 pr-2 text-center">Vaatlusprotokoll</th>
                     <th className="py-1"></th>
                   </tr>
                 </thead>
@@ -165,7 +154,9 @@ export default async function OpetajaUuringukavaPage() {
                             </a>
                           </td>
                           <td className="py-2 pr-2 text-center">{e.expectingObserver ? 'Jah' : 'Ei'}</td>
-                          <td className="py-2 pr-2">{e.observerUser?.name ?? e.observerName ?? '—'}</td>
+                          <td className="py-2 pr-2">
+                            {e.observerUser?.name ?? (e.expectingObserver ? 'vaba' : '—')}
+                          </td>
                           <td className="py-2 pr-2"></td>
                           <td className="py-2 pr-2 text-center">
                             <a
@@ -177,6 +168,18 @@ export default async function OpetajaUuringukavaPage() {
                             >
                               {e.journalEntry ? 'Muuda' : 'Lisa'}
                             </a>
+                          </td>
+                          <td className="py-2 pr-2 text-center">
+                            {e.lessonPlan && e.lessonPlan.observationProtocols.length > 0 ? (
+                              <a
+                                href={`/opetaja/vaatlusprotokoll/${e.id}`}
+                                className="inline-block rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 bg-green-50 text-green-600"
+                              >
+                                Vaata ({e.lessonPlan.observationProtocols.length})
+                              </a>
+                            ) : (
+                              '—'
+                            )}
                           </td>
                           <td className="py-2">
                             <button
@@ -273,18 +276,7 @@ export default async function OpetajaUuringukavaPage() {
                           />
                         </td>
                         <td className="py-2 pr-2">
-                          <select
-                            name={`observerUserId.${e.id}`}
-                            defaultValue={e.observerUserId ?? ''}
-                            className="w-28 rounded border border-slate-300 px-1 py-1 text-xs"
-                          >
-                            <option value="">— vali —</option>
-                            {observerOptions.map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.name}
-                              </option>
-                            ))}
-                          </select>
+                          {e.observerUser?.name ?? (e.expectingObserver ? 'vaba' : '—')}
                         </td>
                         <td className="py-2 pr-2">
                           <button
@@ -307,6 +299,18 @@ export default async function OpetajaUuringukavaPage() {
                           >
                             {e.journalEntry ? 'Muuda' : 'Lisa'}
                           </a>
+                        </td>
+                        <td className="py-2 pr-2 text-center">
+                          {e.lessonPlan && e.lessonPlan.observationProtocols.length > 0 ? (
+                            <a
+                              href={`/opetaja/vaatlusprotokoll/${e.id}`}
+                              className="inline-block rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 bg-green-100 text-green-700"
+                            >
+                              Vaata ({e.lessonPlan.observationProtocols.length})
+                            </a>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="py-2">
                           <button

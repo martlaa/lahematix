@@ -43,6 +43,16 @@ export default async function OpetajaUuringuandmestikPage() {
             Kavanda oma katsetunnid ja ava sealt iga tunni järgne uurijapäeviku sissekanne.
           </p>
         </Link>
+
+        <Link
+          href="/vaatlused"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">Minu tunnivaatlused</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Broneeri end kolleegi tunni vaatlejaks või vaata oma juba broneeritud tunnivaatlusi.
+          </p>
+        </Link>
       </main>
     </>
   );

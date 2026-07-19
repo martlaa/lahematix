@@ -2,6 +2,7 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
+import { Alert } from '@/components/ui';
 import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, type MaterialsAnswers } from '@/lib/lessonplan/types';
 
 const METHOD_LABEL: Record<string, string> = {
@@ -29,6 +30,10 @@ export default async function VaatlusDetailPage({ params }: { params: { planEntr
   const beforeComments = lessonPlan.comments.filter((c) => c.timing === 'ENNE');
   const afterComments = lessonPlan.comments.filter((c) => c.timing === 'JAREL');
 
+  const reviewDeadline = new Date(entry.date);
+  reviewDeadline.setDate(reviewDeadline.getDate() - 7);
+  const reviewOverdue = beforeComments.length === 0 && new Date() >= reviewDeadline && entry.date >= new Date();
+
   return (
     <>
       <Header userLabel={`${session.name} (${session.role === 'TEADUR' ? 'teadur' : 'õpetaja-uurija'})`} />
@@ -50,6 +55,13 @@ export default async function VaatlusDetailPage({ params }: { params: { planEntr
             Tunni teema: {entry.topic ?? '—'}
           </p>
         </div>
+
+        {reviewOverdue && (
+          <Alert kind="info">
+            Palun vaata tunnikava üle ja lisa vajadusel kommentaar enne tundi — soovituslik tähtaeg oli{' '}
+            {reviewDeadline.toLocaleDateString('et-EE')} (üks nädal enne tundi).
+          </Alert>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Tunni osad</h2>
