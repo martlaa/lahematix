@@ -1,8 +1,13 @@
-# LAHEMATIX — Faas 1 (autentimine + nõusolekute moodul)
+# LAHEMATIX — Faas 1–3 (autentimine, andmekogumine, tunnikavad ja vaatlusprotokoll)
 
-See on LAHEMATE projekti uuringurakenduse **Faas 1** lähtekood: koolide/kasutajate haldus,
-kõik neli nõusolekuvormi (koolijuht, õpetaja, lapsevanem, 15+ õpilane), nõusoleku
-tagasivõtmine ja lihtne jälgimisvaade teadurile.
+See on LAHEMATE projekti uuringurakenduse lähtekood. Valmis on **Faas 1–3**:
+koolide/kasutajate haldus ja kõik neli nõusolekuvormi (Faas 1); õpilase ja õpetaja
+küsimustikud, matemaatilise probleemilahenduse testid koos hindamisega, uurijapäevik
+ja õpetaja isiklik uuringukava (Faas 2); struktureeritud tunnikavad, sellest
+dünaamiliselt genereeritud tunnivaatlusprotokoll, tunnivaatluste broneerimise turg,
+teaduri näidistunnikavad ja instrumentide katsetuskeskkond (Faas 3). Täpne kava ja
+järgmised faasid (andmeeksport, avalik tunnikavade galerii, tootmisvalmidus) on
+dokumendis `LAHEMATIX_arendusnouded_ja_plaan-4.md`.
 
 **Autentimine (versioon 3):** HarID/MobiilID/SmartID-st loobuti kolleegide soovitusel —
 sisselogimine käib e-posti-põhise ühekordse lingiga (magic link, kehtib 15 min, vt
@@ -81,15 +86,19 @@ Let's Encrypt SSL-sertifikaati domeeni jaoks (nt `lahematix.lahemate.ee`). Selle
 saan Sind aidata järgmises Claude Code sessioonis, kui VPS ligipääs on olemas.
 
 Autentimine (e-posti-põhine magic link) on juba püsiv lahendus — HarID-integratsiooni
-enam ei plaanita (vt `LAHEMATIX_arendusnouded_ja_plaan.md`, versioon 3).
+enam ei plaanita (vt `LAHEMATIX_arendusnouded_ja_plaan-4.md`).
 
 ---
 
 ## 3. Projekti struktuur
 
 ```
-prisma/schema.prisma       — andmemudel (Faas 1: User, School, Teacher, Student,
-                              Parent, ConsentRecord, InviteToken, AuditLog)
+prisma/schema.prisma       — andmemudel: Faas 1 (User, School, Teacher, Student,
+                              ConsentRecord, InviteToken, AuditLog) + Faas 2
+                              (QuestionnaireResponse, TestSubmission/Photo/Grading,
+                              JournalEntry, ResearchPlanEntry) + Faas 3 (LessonPlan/
+                              Part, LessonPlanComment, ObservationProtocol,
+                              SampleLessonPlan/Part, InstrumentTrial)
 prisma/seed.ts              — loob esimese admin-kasutaja
 src/lib/session.ts          — sessioonihaldus (iron-session)
 src/app/api/auth/login/     — magic-link väljastamine (e-posti saatmine)
@@ -97,25 +106,39 @@ src/app/api/auth/verify/    — magic-link kontroll ja sessiooni loomine
 src/lib/prisma.ts           — andmebaasiühenduse singleton
 src/lib/mail.ts             — e-kirjade saatmine (zone.ee SMTP)
 src/lib/pseudonym.ts        — õpilaste pseudonüümikoodide genereerimine
-src/components/             — jagatud UI komponendid
+src/lib/questionnaires/     — Lisa 4 (eel/järel) ja Lisa 8 sisu (hardcoded)
+src/lib/tests/              — matemaatilise probleemilahenduse testid (3 vanuseastet)
+src/lib/journal/            — Lisa 7 (uurijapäeviku) sisu
+src/lib/lessonplan/         — tunniosa tüübid, õppevara valikud (Lisa 11)
+src/lib/observation/        — Lisa 6 (vaatlusprotokolli) tunnused/domeenid
+src/components/             — jagatud UI komponendid (sh QuestionnaireForm, TestForm,
+                              JournalForm — taaskasutatavad ka teaduri instrumentide
+                              katsetuskeskkonnas)
 src/app/
   admin/                    — koolide/kasutajate haldus
-  teadur/                   — jälgimisvaade (nõusolekute seis)
+  teadur/                   — jälgimisvaade, näidistunnikavad, instrumentide
+                              katsetuskeskkond
   koolijuht/nousolek/       — Lisa 1
-  opetaja/                  — töölaud, nousolek/ (Lisa 2), opilased/ (nimekiri)
+  opetaja/                  — töölaud, nousolek/ (Lisa 2), opilased/ (nimekiri, CSV
+                              import), uuringukava/ (Lisa 10), tunnikava/ (Lisa 11),
+                              paevik/ (Lisa 7), kysimustik/ (Lisa 8), vaatlusprotokoll/
   lapsevanem/                — töölaud, nousolek/[studentId]/ (Lisa 3)
-  opilane/nousolek/[token]/  — Lisa 3b (ilma sisselogimiseta)
+  opilane/nousolek/[token]/  — Lisa 3b, kysimustik/[token]/, test/[token]/ — kõik
+                              ilma sisselogimiseta (token-URL)
+  vaatlused/                 — tunnivaatluste broneerimise turg + protokolli täitmine
   api/                       — kõik vastavad API route'id
 ```
 
-## 4. Mis on veel PUUDU (Faas 2+, ei ole selles versioonis)
-- CSV-import õpilaste nimekirja jaoks (praegu ainult käsitsi vorm — CSV lisandub kiirelt)
-- Küsimustikud, testid, tunnivaatlusprotokoll, uurijapäevik (Lisa 4–9 sisu)
-- Testipiltide üleslaadimine ja automaatne koondamine
-- Tunnikavade CMS
-- Andmeeksport
+## 4. Mis on veel PUUDU (Faas 4+, ei ole selles versioonis)
+- Andmeeksport (pseudonümiseeritud CSV/Excel iga instrumendi kohta) ja andmete
+  elutsükli haldus (tegelik kustutamine pärast nõusoleku tagasivõtmist)
+- Näidistunnikavade avalik galerii/repositoorium (praegu nähtavad ainult sobiva
+  vanuseastme/teema/meetodiga õpetajatele)
+- Tootmisvalmidus: VPS-ile üleminek, päris SMTP seadistus, WCAG kiirülevaatus
 
-Need on kirjeldatud dokumendis `LAHEMATIX_arendusnouded_ja_plaan.md` (Faasid 2–5).
+Need on kirjeldatud dokumendis `LAHEMATIX_arendusnouded_ja_plaan-4.md` (Faasid 4–6).
+Faasid 1–3 (autentimine, andmekogumine, tunnikavad/vaatlusprotokoll/teaduri
+tööriistad) on valmis.
 
 ## 5. Kui midagi ei tööta
 Kõige tõenäolisemad probleemid:
