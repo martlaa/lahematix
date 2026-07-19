@@ -78,6 +78,17 @@ export default async function OpetajaDashboard() {
             Küsimustik, uuringukava ja uurijapäevik ühes kohas.
           </p>
         </Link>
+
+        <Link
+          href="/vaatlused"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">Minu vaatlused</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Katsetunnid, kus oled kolleegile vaatlejaks määratud — tunnikava, kommentaarid ja
+            vaatlusprotokoll.
+          </p>
+        </Link>
       </main>
     </>
   );

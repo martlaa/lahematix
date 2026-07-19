@@ -27,6 +27,16 @@ export async function POST(req: NextRequest) {
     VALID_METHODS.includes(m as Method),
   );
 
+  const observerUserIdRaw = String(form.get('observerUserId') ?? '').trim();
+  const observerUserId = observerUserIdRaw
+    ? (
+        await prisma.user.findFirst({
+          where: { id: observerUserIdRaw, role: { in: ['OPETAJA', 'TEADUR'] }, status: 'ACTIVE' },
+          select: { id: true },
+        })
+      )?.id ?? null
+    : null;
+
   await prisma.researchPlanEntry.create({
     data: {
       teacherId: teacher.id,
@@ -36,9 +46,8 @@ export async function POST(req: NextRequest) {
       studentGroup: String(form.get('studentGroup') ?? '').trim() || null,
       appliedMethods,
       topic: String(form.get('topic') ?? '').trim() || null,
-      lessonPlanUrl: String(form.get('lessonPlanUrl') ?? '').trim() || null,
       expectingObserver: form.get('expectingObserver') === 'on',
-      observerName: String(form.get('observerName') ?? '').trim() || null,
+      observerUserId,
     },
   });
 

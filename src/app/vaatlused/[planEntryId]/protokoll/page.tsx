@@ -1,0 +1,252 @@
+import { getSession } from '@/lib/session';
+import { prisma } from '@/lib/prisma';
+import { redirect, notFound } from 'next/navigation';
+import { Header } from '@/components/Header';
+import { Alert } from '@/components/ui';
+import { LESSON_PART_TYPE_LABEL } from '@/lib/lessonplan/types';
+import {
+  OBSERVATION_DOMAINS,
+  RATING_SCALE_LABELS,
+  INCIDENT_CONSTRUCT_OPTIONS,
+  type ObservationRatings,
+  type IncidentLogRow,
+  type ObservationSummary,
+} from '@/lib/observation/lisa6';
+
+const INCIDENT_ROW_COUNT = 8;
+const RATING_VALUES = [1, 2, 3, 4];
+
+export default async function VaatlusProtokollPage({ params }: { params: { planEntryId: string } }) {
+  const session = await getSession();
+  if (!session.userId || (session.role !== 'OPETAJA' && session.role !== 'TEADUR')) redirect('/login');
+
+  const entry = await prisma.researchPlanEntry.findUnique({
+    where: { id: params.planEntryId },
+    include: {
+      teacher: { include: { user: true, school: true } },
+      lessonPlan: { include: { parts: { orderBy: { order: 'asc' } } } },
+    },
+  });
+  if (!entry || entry.observerUserId !== session.userId) notFound();
+  if (!entry.lessonPlan) notFound();
+
+  const parts = entry.lessonPlan.parts;
+
+  const protocol = await prisma.observationProtocol.findUnique({
+    where: { lessonPlanId_observerUserId: { lessonPlanId: entry.lessonPlan.id, observerUserId: session.userId } },
+  });
+
+  const ratings: ObservationRatings = protocol?.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
+  const incidents: IncidentLogRow[] = protocol?.incidentsJson ? JSON.parse(protocol.incidentsJson) : [];
+  const summary: Partial<ObservationSummary> = protocol?.summaryJson ? JSON.parse(protocol.summaryJson) : {};
+
+  const incidentRows: IncidentLogRow[] = Array.from({ length: INCIDENT_ROW_COUNT }, (_, i) => ({
+    timeMin: incidents[i]?.timeMin ?? '',
+    description: incidents[i]?.description ?? '',
+    construct: incidents[i]?.construct ?? '',
+    whoWith: incidents[i]?.whoWith ?? '',
+  }));
+
+  return (
+    <>
+      <Header userLabel={`${session.name} (${session.role === 'TEADUR' ? 'teadur' : 'õpetaja-uurija'})`} />
+      <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-6">
+        <a href={`/vaatlused/${entry.id}`} className="inline-block text-sm text-brand-600 underline hover:no-underline">
+          ← Tagasi tunnikava juurde
+        </a>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h1 className="text-xl font-semibold text-slate-900">Tunnivaatlusprotokoll</h1>
+          <p className="text-sm text-slate-600 mt-2">
+            Õpetaja: {entry.teacher.user.name} ({entry.teacher.school.name}) <br />
+            Kuupäev: {entry.date.toLocaleDateString('et-EE')} <br />
+            Tunni teema: {entry.topic ?? '—'}
+          </p>
+          {protocol?.submittedAt && (
+            <Alert kind="info">
+              Esitasid selle protokolli esmakordselt {protocol.submittedAt.toLocaleDateString('et-EE')}. Vorm on
+              eeltäidetud senise sisuga — saad seda täiendada ja uuesti salvestada.
+            </Alert>
+          )}
+        </div>
+
+        {parts.length === 0 ? (
+          <Alert kind="error">Sellel tunnikaval pole veel ühtegi tunniosa — õpetaja peab need enne lisama.</Alert>
+        ) : (
+          <form action="/api/vaatlused/protokoll" method="post" className="space-y-6">
+            <input type="hidden" name="planEntryId" value={entry.id} />
+
+            {parts.map((p, idx) => {
+              const checkpointRatings = ratings[p.id] ?? {};
+              return (
+                <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+                  <h2 className="font-semibold text-slate-900 mb-1">
+                    Checkpoint {idx + 1}: {p.title}
+                  </h2>
+                  <p className="text-xs text-slate-500 mb-4">
+                    {LESSON_PART_TYPE_LABEL[p.type]} · {p.durationMin} min
+                    {p.description ? ` · ${p.description}` : ''}
+                  </p>
+
+                  {OBSERVATION_DOMAINS.map((domain) => (
+                    <div key={domain.key} className="mb-4">
+                      <p className="text-sm font-medium text-slate-800">
+                        {domain.key}. {domain.label}
+                      </p>
+                      <table className="w-full text-xs mt-2 min-w-[600px]">
+                        <tbody>
+                          {domain.items.map((item) => {
+                            const current = checkpointRatings[item.key];
+                            return (
+                              <tr key={item.key} className="border-b border-slate-100 align-top">
+                                <td className="py-2 pr-2 w-64">{item.label}</td>
+                                <td className="py-2 pr-2">
+                                  <div className="flex gap-2">
+                                    {RATING_VALUES.map((v) => (
+                                      <label key={v} className="flex items-center gap-1">
+                                        <input
+                                          type="radio"
+                                          name={`rating.${p.id}.${item.key}`}
+                                          value={v}
+                                          defaultChecked={current?.value === v}
+                                          required
+                                        />
+                                        {v}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="py-2 pr-2 w-56">
+                                  <input
+                                    type="text"
+                                    name={`note.${p.id}.${item.key}`}
+                                    defaultValue={current?.note ?? ''}
+                                    placeholder="Märkus / tõendus"
+                                    className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+              <h2 className="font-semibold text-slate-900 mb-1">Intsidentide ja tähelepanekute logi</h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Kirjuta üles märkimisväärsed hetked, mis struktureeritud hinnangutesse ei mahu. Konstrukti
+                lühikoodid: {INCIDENT_CONSTRUCT_OPTIONS.join(' / ')}.
+              </p>
+              <table className="w-full text-xs min-w-[700px]">
+                <thead>
+                  <tr className="text-left text-slate-500 border-b border-slate-200">
+                    <th className="py-1 pr-2">Aeg (min)</th>
+                    <th className="py-1 pr-2">Mis juhtus</th>
+                    <th className="py-1 pr-2">Konstrukt</th>
+                    <th className="py-1 pr-2">Kellega seotud</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {incidentRows.map((row, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      <td className="py-1 pr-2">
+                        <input
+                          type="text"
+                          name={`incident.${i}.timeMin`}
+                          defaultValue={row.timeMin}
+                          className="w-16 rounded border border-slate-300 px-1 py-1 text-xs"
+                        />
+                      </td>
+                      <td className="py-1 pr-2">
+                        <input
+                          type="text"
+                          name={`incident.${i}.description`}
+                          defaultValue={row.description}
+                          className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
+                        />
+                      </td>
+                      <td className="py-1 pr-2">
+                        <select
+                          name={`incident.${i}.construct`}
+                          defaultValue={row.construct}
+                          className="rounded border border-slate-300 px-1 py-1 text-xs"
+                        >
+                          <option value="">—</option>
+                          {INCIDENT_CONSTRUCT_OPTIONS.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-1 pr-2">
+                        <input
+                          type="text"
+                          name={`incident.${i}.whoWith`}
+                          defaultValue={row.whoWith}
+                          className="w-32 rounded border border-slate-300 px-1 py-1 text-xs"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+              <h2 className="font-semibold text-slate-900">Üldkokkuvõte</h2>
+              <label className="block">
+                <span className="block text-sm font-medium text-slate-700 mb-1">Lühikokkuvõte tunnist (3–5 lauset)</span>
+                <textarea
+                  name="shortSummary"
+                  defaultValue={summary.shortSummary ?? ''}
+                  rows={3}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-sm font-medium text-slate-700 mb-1">
+                  Kas ja kuidas tund järgis kavandatud meetodi põhivõtteid? Too seos tunnikavaga.
+                </span>
+                <textarea
+                  name="methodFidelity"
+                  defaultValue={summary.methodFidelity ?? ''}
+                  rows={3}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-sm font-medium text-slate-700 mb-1">Mis üllatas või erines oodatust?</span>
+                <textarea
+                  name="surprises"
+                  defaultValue={summary.surprises ?? ''}
+                  rows={2}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-sm font-medium text-slate-700 mb-1">
+                  Soovitused õpetajale ja/või projekti meeskonnale
+                </span>
+                <textarea
+                  name="recommendations"
+                  defaultValue={summary.recommendations ?? ''}
+                  rows={2}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                Salvesta protokoll
+              </button>
+            </div>
+          </form>
+        )}
+      </main>
+    </>
+  );
+}

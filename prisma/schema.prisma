@@ -70,6 +70,22 @@ enum TestPhase {
   JAREL
 }
 
+// Faas 1 jätk: tunnikava (Lisa 11) tunniosa tüüp — rippmenüü väärtused
+// õpetaja enda sõnastatud tunnikava jaoks.
+enum LessonPartType {
+  OPETAJA_ESITLUS
+  INDIVIDUAALNE_HARJUTAMINE
+  INDIVIDUAALNE_PROBLEEMILAHENDUS
+  PROBLEEMILAHENDUS_RUHMATOONA
+  UHINE_ARUTELU
+  REFLEKSIOON
+}
+
+enum CommentTiming {
+  ENNE
+  JAREL
+}
+
 // --- Kasutajad (täiskasvanud rollid) ---
 
 model User {
@@ -89,6 +105,9 @@ model User {
   loginTokens LoginToken[]
   questionnaireResponses QuestionnaireResponse[]
   testGradings TestGrading[]
+  observedEntries       ResearchPlanEntry[]   @relation("Observer")
+  lessonPlanComments    LessonPlanComment[]
+  observationProtocols  ObservationProtocol[]
 
   @@index([role])
 }
@@ -283,9 +302,9 @@ model TestGrading {
 // --- Õpetaja isiklik uuringukava ja uurijapäevik (Faas 1 jätk, Lisa 7 + Lisa 10) ---
 // Uuringukava rida kirjeldab ühte plaanitud katsetundi; õpetaja lisab/muudab/
 // kustutab ridu ise jooksvalt (vt Lisa 10 juhis — tabel ei pea korraga täielik
-// olema). lessonPlanUrl on lihtne vaba tekst/link — valmisolek täieliku
-// tunnikavade (LessonPlan) funktsionaalsuse jaoks lisandub hiljem, praegu
-// piisab sellest väljast lingi jaoks, kui tunnikava on mujal juba olemas.
+// olema). observerUserId viitab konkreetsele teisele õpetajale-uurijale või
+// teadurile, kellel on LAHEMATIX konto — tema pääseb sellele reale ligi
+// vaatlejana (tunnikava lugemine + kommenteerimine + vaatlusprotokoll).
 
 model ResearchPlanEntry {
   id                String    @id @default(cuid())
@@ -297,16 +316,90 @@ model ResearchPlanEntry {
   studentGroup      String? // nt "5A"
   appliedMethods    Method[]  @default([]) // selle tunni jooksul tegelikult rakendatud meetod(id)
   topic             String?
-  lessonPlanUrl     String? // link tunnikavale, kui olemas — lisandub sageli hiljem
   expectingObserver Boolean   @default(false)
-  observerName      String?
+  observerName      String? // vaba tekst, säilib kuvamiseks (nt kui kontot veel pole)
+  observerUserId    String?
+  observerUser      User?     @relation("Observer", fields: [observerUserId], references: [id])
   hidden            Boolean   @default(false) // "Peida"/"Taasta" — pehme peitmine, mitte kustutamine
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   journalEntry JournalEntry?
+  lessonPlan   LessonPlan?
 
   @@index([teacherId])
+  @@index([observerUserId])
+}
+
+// Tunnikava (Lisa 11) — kuulub ühele uuringukava reale (1:1). Tunniosad
+// (LessonPlanPart) on eraldi tabel, kuna neid on muutuv arv (3–6) ja need
+// on ühtlasi aluseks tunnivaatlusprotokolli dünaamilistele checkpointidele.
+
+model LessonPlan {
+  id                  String   @id @default(cuid())
+  researchPlanEntryId String   @unique
+  researchPlanEntry   ResearchPlanEntry @relation(fields: [researchPlanEntryId], references: [id])
+  materialsJson       String? // { slaidid?, toolehed?, ulesanded?, opik?, kahoot?, muu? } — väärtus = link/tekst, võti olemas = linnuke märgitud
+  homeworkText        String?
+  homeworkRelated     Boolean  @default(false) // kas kodutöö on otseselt seotud tänase tunni teemaga
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  parts                LessonPlanPart[]
+  comments             LessonPlanComment[]
+  observationProtocols ObservationProtocol[]
+}
+
+model LessonPlanPart {
+  id           String         @id @default(cuid())
+  lessonPlanId String
+  lessonPlan   LessonPlan     @relation(fields: [lessonPlanId], references: [id])
+  order        Int
+  title        String
+  type         LessonPartType
+  durationMin  Int
+  description  String?
+  observerNote String? // "Vaatlejale" vihje — valikuline
+
+  @@index([lessonPlanId])
+}
+
+// Vaatleja kommentaarid tunnikavale — enne katsetundi ja pärast seda.
+
+model LessonPlanComment {
+  id           String        @id @default(cuid())
+  lessonPlanId String
+  lessonPlan   LessonPlan    @relation(fields: [lessonPlanId], references: [id])
+  authorUserId String
+  authorUser   User          @relation(fields: [authorUserId], references: [id])
+  timing       CommentTiming
+  text         String
+  createdAt    DateTime      @default(now())
+
+  @@index([lessonPlanId])
+}
+
+// Tunnivaatlusprotokoll (Lisa 6) — dünaamiline: checkpointide arv ja
+// pealkirjad tulevad LessonPlan'i tunniosadest (ratingsJson võti on
+// LessonPlanPart.id), mitte staatilisest I–III jaotusest. Iga vaatleja
+// (kellel LAHEMATIX konto — õpetaja-uurija või teadur) täidab oma
+// protokolli; sama tunnikava kohta võib olla mitu vaatlejat (reliaabluse
+// kontroll, vt Lisa 6 juhend).
+
+model ObservationProtocol {
+  id             String     @id @default(cuid())
+  lessonPlanId   String
+  lessonPlan     LessonPlan @relation(fields: [lessonPlanId], references: [id])
+  observerUserId String
+  observerUser   User       @relation(fields: [observerUserId], references: [id])
+  ratingsJson    String? // { [lessonPlanPartId]: { A1: {value, note}, ..., D3: {value, note} } }
+  incidentsJson  String? // [{ timeMin, description, construct, whoWith }]
+  summaryJson    String? // { shortSummary, methodFidelity, surprises, recommendations }
+  submittedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([lessonPlanId, observerUserId])
 }
 
 // Uurijapäeviku sissekanne (Lisa 7) — üks kindla katsetunni kohta, kirjutatakse

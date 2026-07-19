@@ -25,7 +25,7 @@ export default async function OpetajaPaevikPage({ params }: { params: { planEntr
 
   const planEntry = await prisma.researchPlanEntry.findUnique({
     where: { id: params.planEntryId },
-    include: { journalEntry: true },
+    include: { journalEntry: true, lessonPlan: true },
   });
   if (!planEntry || planEntry.teacherId !== teacher!.id) notFound();
 
@@ -58,11 +58,11 @@ export default async function OpetajaPaevikPage({ params }: { params: { planEntr
             Meetod: {teacher!.method ? METHOD_LABEL[teacher!.method] : '—'} <br />
             Mitmes katsetund: {lessonNumber}. (praegu kokku {allEntries.length} kavandatud tundi) <br />
             Tunni teema: {planEntry!.topic ?? '—'}
-            {planEntry!.lessonPlanUrl && (
+            {planEntry!.lessonPlan && (
               <>
                 <br />
-                Tunnikava viide:{' '}
-                <a href={planEntry!.lessonPlanUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 underline">
+                Tunnikava:{' '}
+                <a href={`/opetaja/tunnikava/${planEntry!.id}`} className="text-brand-600 underline">
                   ava
                 </a>
               </>

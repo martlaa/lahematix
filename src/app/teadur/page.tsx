@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
@@ -51,6 +52,17 @@ export default async function TeadurDashboard() {
     <>
       <Header userLabel={`${session.name} (teadur)`} />
       <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-8">
+        <Link
+          href="/vaatlused"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">Minu vaatlused</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Katsetunnid, kus oled õpetajale-uurijale vaatlejaks määratud — tunnikava, kommentaarid ja
+            vaatlusprotokoll.
+          </p>
+        </Link>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Koole nõusolekuga" value={`${schoolsConsented}/${schoolsTotal}`} />
           <StatCard label="Õpetajaid nõusolekuga" value={`${teacherConsents.length}/${teachersTotal}`} />
