@@ -7,6 +7,6 @@
 	email tammets@gmail.com
 }
 
-app.lahemate.ee {
+uuring.lahemate.ee {
 	reverse_proxy app:3000
 }

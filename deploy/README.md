@@ -39,9 +39,9 @@ merge → production ──▶ GitHub Actions ──ssh──▶ Hetzner VPS
 ### 2. Point DNS (in Zone)
 In Zone DNS for `lahemate.ee`, add an **A record**:
 ```
-app.lahemate.ee.   A   <hetzner-ip>
+uuring.lahemate.ee.   A   <hetzner-ip>
 ```
-Wait for it to resolve (`dig +short app.lahemate.ee`) before deploying, so Caddy
+Wait for it to resolve (`dig +short uuring.lahemate.ee`) before deploying, so Caddy
 can obtain the certificate.
 
 ### 3. Bootstrap the server
@@ -94,7 +94,7 @@ git push -u origin production
 That push triggers the GitHub Action, which deploys automatically. (Or do the
 very first deploy by hand on the server: `bash deploy/deploy.sh`.)
 
-Visit **https://app.lahemate.ee** — Caddy provisions the certificate on first hit.
+Visit **https://uuring.lahemate.ee** — Caddy provisions the certificate on first hit.
 
 ### 8. Seed the first admin (once)
 ```bash

@@ -24,6 +24,12 @@ $COMPOSE run --rm migrate
 echo "==> Starting app + reverse proxy"
 $COMPOSE up -d app caddy
 
+# A bind-mounted Caddyfile edit doesn't restart Caddy on its own — reload it so
+# domain / proxy changes take effect (graceful; falls back to a restart).
+echo "==> Reloading Caddy config"
+$COMPOSE exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null ||
+	$COMPOSE restart caddy
+
 echo "==> Pruning dangling images"
 docker image prune -f >/dev/null || true
 
