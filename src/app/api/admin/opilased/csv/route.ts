@@ -60,5 +60,5 @@ export async function POST(req: NextRequest) {
   if (allErrors.length > 0) {
     params.set('errors', JSON.stringify(allErrors.slice(0, 25)));
   }
-  return NextResponse.redirect(new URL(`/admin?${params.toString()}`, process.env.APP_BASE_URL || req.url), 303);
+  return NextResponse.redirect(new URL(`/admin/kasutajad?${params.toString()}`, process.env.APP_BASE_URL || req.url), 303);
 }

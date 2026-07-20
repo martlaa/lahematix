@@ -36,5 +36,5 @@ export async function POST(req: NextRequest) {
     data: { actorId: session.userId, action: 'CREATE', entity: 'School', entityId: school.id, meta: name },
   });
 
-  return NextResponse.redirect(new URL('/admin', process.env.APP_BASE_URL || req.url), 303);
+  return NextResponse.redirect(new URL('/admin/kasutajad', process.env.APP_BASE_URL || req.url), 303);
 }
