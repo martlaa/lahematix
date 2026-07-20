@@ -58,7 +58,7 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
         <h2 className="font-semibold text-slate-900 mb-3">Tunni osad</h2>
         {detail.parts.length === 0 ? (
-          <p className="text-sm text-slate-400">Tunniosi pole lisatud.</p>
+          <p className="text-sm text-slate-500">Tunniosi pole lisatud.</p>
         ) : (
           <table className="w-full text-xs min-w-[600px]">
             <thead>
@@ -94,7 +94,7 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
               {materials[m.key] ? `: ${materials[m.key]}` : ''}
             </li>
           ))}
-          {Object.keys(materials).length === 0 && <li className="text-slate-400">Õppevara pole märgitud.</li>}
+          {Object.keys(materials).length === 0 && <li className="text-slate-500">Õppevara pole märgitud.</li>}
         </ul>
         {detail.homeworkText && (
           <p className="text-sm text-slate-700 mt-3">

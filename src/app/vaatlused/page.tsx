@@ -46,7 +46,7 @@ export default async function VaatlusedPage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Tunnivaatluste broneerimise tabel</h2>
           {marketplace.length === 0 ? (
-            <p className="text-sm text-slate-400">Ükski õpetaja pole hetkel vaatlejat oodanud.</p>
+            <p className="text-sm text-slate-500">Ükski õpetaja pole hetkel vaatlejat oodanud.</p>
           ) : (
             <table className="w-full text-sm min-w-[800px]">
               <thead>
@@ -73,7 +73,7 @@ export default async function VaatlusedPage() {
                       <td className="py-2 pr-2">{e.topic ?? '—'}</td>
                       <td className="py-2 pr-2">
                         {isOwnLesson ? (
-                          <span className="text-slate-400">sinu enda tund</span>
+                          <span className="text-slate-500">sinu enda tund</span>
                         ) : e.observerUserId ? (
                           <span className={isMyBooking ? 'text-brand-700 font-medium' : 'text-slate-500'}>
                             broneeritud{isMyBooking ? ' (sinu poolt)' : ''}
@@ -107,7 +107,7 @@ export default async function VaatlusedPage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Minu broneeritud tunnivaatlused</h2>
           {myObservations.length === 0 ? (
-            <p className="text-sm text-slate-400">Sa pole veel ühtegi tunnivaatlust enda nimele broneerinud.</p>
+            <p className="text-sm text-slate-500">Sa pole veel ühtegi tunnivaatlust enda nimele broneerinud.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -135,7 +135,7 @@ export default async function VaatlusedPage() {
                             ava
                           </a>
                         ) : (
-                          <span className="text-slate-400">pole veel valmis</span>
+                          <span className="text-slate-500">pole veel valmis</span>
                         )}
                       </td>
                       <td className="py-2 pr-2">
@@ -154,7 +154,7 @@ export default async function VaatlusedPage() {
                             {ownProtocol?.publishedAt ? 'Avalikustatud' : ownProtocol?.submittedAt ? 'Mustand' : 'Täida'}
                           </a>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-500">—</span>
                         )}
                       </td>
                     </tr>

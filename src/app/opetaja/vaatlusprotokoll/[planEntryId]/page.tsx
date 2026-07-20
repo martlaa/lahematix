@@ -113,7 +113,7 @@ export default async function OpetajaVaatlusprotokollPage(props: { params: Promi
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
                 <h3 className="font-semibold text-slate-900 mb-3">Intsidentide ja tähelepanekute logi</h3>
                 {incidents.length === 0 ? (
-                  <p className="text-sm text-slate-400">Intsidente pole märgitud.</p>
+                  <p className="text-sm text-slate-500">Intsidente pole märgitud.</p>
                 ) : (
                   <table className="w-full text-xs min-w-[600px]">
                     <thead>

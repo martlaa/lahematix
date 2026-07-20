@@ -148,7 +148,7 @@ export default async function GaleriiPage(
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
         {items.length === 0 ? (
-          <p className="text-sm text-slate-400">Ühtegi tunnikava ei leitud.</p>
+          <p className="text-sm text-slate-500">Ühtegi tunnikava ei leitud.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -204,7 +204,7 @@ export default async function GaleriiPage(
                   </td>
                   <td className="py-2 pr-2">{item.topic ?? '—'}</td>
                   <td className="py-2 pr-2">
-                    {item.authorName} <span className="text-slate-400">({item.authorRoleLabel})</span>
+                    {item.authorName} <span className="text-slate-500">({item.authorRoleLabel})</span>
                   </td>
                   <td className="py-2 pr-2 text-right">{item.partsCount}</td>
                   <td className="py-2 pr-2">{item.publishedAt.toLocaleDateString('et-EE')}</td>

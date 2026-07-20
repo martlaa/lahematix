@@ -59,7 +59,7 @@ export default async function AdminAndmekustutusPage() {
             Nõusoleku tagasi võtnud õpilased ({withdrawnStudents.length})
           </h2>
           {withdrawnStudents.length === 0 ? (
-            <p className="text-sm text-slate-400">Ühtegi kustutamiskõlblikku õpilast pole.</p>
+            <p className="text-sm text-slate-500">Ühtegi kustutamiskõlblikku õpilast pole.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -96,7 +96,7 @@ export default async function AdminAndmekustutusPage() {
             Nõusoleku tagasi võtnud õpetajad-uurijad ({withdrawnTeachers.length})
           </h2>
           {withdrawnTeachers.length === 0 ? (
-            <p className="text-sm text-slate-400">Ühtegi kustutamiskõlblikku õpetajat pole.</p>
+            <p className="text-sm text-slate-500">Ühtegi kustutamiskõlblikku õpetajat pole.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>

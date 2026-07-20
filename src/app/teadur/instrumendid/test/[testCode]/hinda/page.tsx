@@ -59,7 +59,7 @@ export default async function TeadurTestHindaminePage(props: { params: Promise<{
                       {ownAnswer?.choice ? (
                         <strong>{chosenLabel}</strong>
                       ) : (
-                        <span className="text-slate-400">vastuseta</span>
+                        <span className="text-slate-500">vastuseta</span>
                       )}
                     </p>
                     {sub.requiresExplanation && ownAnswer?.choice && (
@@ -68,7 +68,7 @@ export default async function TeadurTestHindaminePage(props: { params: Promise<{
                         {ownAnswer.explanation ? (
                           ownAnswer.explanation
                         ) : (
-                          <span className="text-slate-400 italic">Selgitust ei lisatud.</span>
+                          <span className="text-slate-500 italic">Selgitust ei lisatud.</span>
                         )}
                       </p>
                     )}

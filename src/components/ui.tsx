@@ -109,8 +109,8 @@ export function StatusDot({ status }: { status: QuestionnaireStatus }) {
   };
   const { color, label } = styles[status];
   return (
-    <span className="inline-flex items-center gap-1" title={label}>
-      <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
+    <span className="inline-flex items-center gap-1" title={label} role="img" aria-label={label}>
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} aria-hidden="true" />
     </span>
   );
 }

@@ -146,7 +146,7 @@ export default async function OpetajaTunnikavaPage(
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Tunni osad</h2>
           {parts.length === 0 ? (
-            <p className="text-sm text-slate-400 mb-4">Tunniosi pole veel lisatud.</p>
+            <p className="text-sm text-slate-500 mb-4">Tunniosi pole veel lisatud.</p>
           ) : (
             <form className="mb-6">
               <table className="w-full text-xs min-w-[720px]">
@@ -283,7 +283,7 @@ export default async function OpetajaTunnikavaPage(
               </button>
             </form>
           ) : (
-            <p className="text-xs text-slate-400 border-t border-slate-100 pt-4">
+            <p className="text-xs text-slate-500 border-t border-slate-100 pt-4">
               Maksimaalne tunniosade arv ({MAX_PARTS}) on saavutatud.
             </p>
           )}
@@ -341,7 +341,7 @@ export default async function OpetajaTunnikavaPage(
               Vaatleja ({planEntry!.observerUser.name}) kommentaarid
             </h2>
             {planEntry!.lessonPlan.comments.length === 0 ? (
-              <p className="text-sm text-slate-400">Kommentaare pole veel lisatud.</p>
+              <p className="text-sm text-slate-500">Kommentaare pole veel lisatud.</p>
             ) : (
               <ul className="space-y-2">
                 {planEntry!.lessonPlan.comments.map((c) => (

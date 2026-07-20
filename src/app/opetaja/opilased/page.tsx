@@ -284,7 +284,7 @@ export default async function OpilasedPage(
                       </td>
                       <td className="py-2">
                         {s.name}
-                        <div className="text-xs text-slate-400">{s.email}</div>
+                        <div className="text-xs text-slate-500">{s.email}</div>
                       </td>
                       <td className="py-2 font-mono">{s.pseudonymCode}</td>
                       <td className="py-2">{s.classCode ?? '—'}</td>
@@ -373,7 +373,7 @@ export default async function OpilasedPage(
                 })}
                 {students.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="py-4 text-center text-slate-400">
+                    <td colSpan={12} className="py-4 text-center text-slate-500">
                       Õpilasi pole veel lisatud
                     </td>
                   </tr>

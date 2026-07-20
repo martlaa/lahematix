@@ -110,7 +110,7 @@ export default async function TeadurEksportPage() {
                             XLSX
                           </a>
                         </div>
-                        <p className="text-xs text-slate-400">Luba kehtib ühekordseks allalaadimiseks.</p>
+                        <p className="text-xs text-slate-500">Luba kehtib ühekordseks allalaadimiseks.</p>
                       </div>
                     )}
                     {d.gated && (!d.request || d.request.status === 'DENIED' || d.request.status === 'FULFILLED') && (
@@ -121,7 +121,7 @@ export default async function TeadurEksportPage() {
                           </p>
                         )}
                         {d.request?.status === 'FULFILLED' && (
-                          <p className="text-xs text-slate-400">Eelmine luba on ära kasutatud.</p>
+                          <p className="text-xs text-slate-500">Eelmine luba on ära kasutatud.</p>
                         )}
                         <form action="/api/teadur/eksport/taotle" method="post">
                           <input type="hidden" name="datasetKey" value={d.key} />

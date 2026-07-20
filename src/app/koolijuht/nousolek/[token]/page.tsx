@@ -41,7 +41,7 @@ export default async function KoolijuhtNousolekTokenPage(props: { params: Promis
             {t.user.name} ({t.user.email})
           </li>
         ))}
-        {school.teachers.length === 0 && <li className="text-slate-400 list-none">Veel pole õpetajaid lisatud</li>}
+        {school.teachers.length === 0 && <li className="text-slate-500 list-none">Veel pole õpetajaid lisatud</li>}
       </ul>
 
       {!school.consentGiven ? (

@@ -43,7 +43,7 @@ export default async function AdminEksporditaotlusedPage() {
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Ootel taotlused ({pending.length})</h2>
           {pending.length === 0 ? (
-            <p className="text-sm text-slate-400">Ootel taotlusi pole.</p>
+            <p className="text-sm text-slate-500">Ootel taotlusi pole.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -97,7 +97,7 @@ export default async function AdminEksporditaotlusedPage() {
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-4">Varasemad otsused</h2>
           {decided.length === 0 ? (
-            <p className="text-sm text-slate-400">Otsuseid pole veel tehtud.</p>
+            <p className="text-sm text-slate-500">Otsuseid pole veel tehtud.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>

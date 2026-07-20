@@ -69,7 +69,7 @@ export default async function TestiHindaminePage(
                   >
                     {photo.originalName}
                   </a>
-                  <span className="text-xs text-slate-400 ml-2">
+                  <span className="text-xs text-slate-500 ml-2">
                     {photo.uploadedAt.toLocaleString('et-EE')}
                   </span>
                 </li>
@@ -124,7 +124,7 @@ export default async function TestiHindaminePage(
                       {studentAnswer?.choice ? (
                         <strong>{chosenLabel}</strong>
                       ) : (
-                        <span className="text-slate-400">puudub (paberil sooritus)</span>
+                        <span className="text-slate-500">puudub (paberil sooritus)</span>
                       )}
                     </p>
                     {sub.requiresExplanation && studentAnswer?.choice && (
@@ -133,7 +133,7 @@ export default async function TestiHindaminePage(
                         {studentAnswer.explanation ? (
                           studentAnswer.explanation
                         ) : (
-                          <span className="text-slate-400 italic">Selgitust ei lisatud.</span>
+                          <span className="text-slate-500 italic">Selgitust ei lisatud.</span>
                         )}
                       </p>
                     )}

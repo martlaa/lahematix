@@ -45,7 +45,7 @@ export default async function TeadurVaatlusprotokollValikPage() {
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           {eligible.length === 0 ? (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-500">
               Sul pole veel ühtegi näidistundi vähemalt {MIN_PARTS} tunniosaga.{' '}
               <a href="/teadur/naidistunnikavad" className="text-brand-600 underline hover:no-underline">
                 Loo esmalt näidistund

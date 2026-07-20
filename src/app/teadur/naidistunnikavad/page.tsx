@@ -75,7 +75,7 @@ export default async function TeadurNaidistunnikavadPage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Minu näidistunnikavad</h2>
           {plans.length === 0 ? (
-            <p className="text-sm text-slate-400">Näidistunde pole veel lisatud.</p>
+            <p className="text-sm text-slate-500">Näidistunde pole veel lisatud.</p>
           ) : (
             <form>
               <table className="w-full text-sm">
@@ -98,7 +98,7 @@ export default async function TeadurNaidistunnikavadPage() {
                     return (
                       <tr
                         key={p.id}
-                        className={'border-b border-slate-100 ' + (p.hidden ? 'text-slate-400' : '')}
+                        className={'border-b border-slate-100 ' + (p.hidden ? 'text-slate-500' : '')}
                       >
                         <td className="py-2 pr-2">{p.gradeBand ?? '—'}</td>
                         <td className="py-2 pr-2">{methodLetters || '—'}</td>

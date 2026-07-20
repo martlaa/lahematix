@@ -67,7 +67,7 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Tunni osad</h2>
           {lessonPlan.parts.length === 0 ? (
-            <p className="text-sm text-slate-400">Tunniosi pole lisatud.</p>
+            <p className="text-sm text-slate-500">Tunniosi pole lisatud.</p>
           ) : (
             <table className="w-full text-xs min-w-[600px]">
               <thead>
@@ -105,7 +105,7 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
                 {materials[m.key] ? `: ${materials[m.key]}` : ''}
               </li>
             ))}
-            {Object.keys(materials).length === 0 && <li className="text-slate-400">Õppevara pole märgitud.</li>}
+            {Object.keys(materials).length === 0 && <li className="text-slate-500">Õppevara pole märgitud.</li>}
           </ul>
           {lessonPlan.homeworkText && (
             <p className="text-sm text-slate-700 mt-3">
@@ -118,7 +118,7 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-3">Kommentaarid enne tundi</h2>
           <ul className="space-y-2 mb-4">
-            {beforeComments.length === 0 && <li className="text-sm text-slate-400">Kommentaare pole veel.</li>}
+            {beforeComments.length === 0 && <li className="text-sm text-slate-500">Kommentaare pole veel.</li>}
             {beforeComments.map((c) => (
               <li key={c.id} className="text-sm text-slate-700 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">
@@ -147,7 +147,7 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-3">Kommentaarid pärast tundi</h2>
           <ul className="space-y-2 mb-4">
-            {afterComments.length === 0 && <li className="text-sm text-slate-400">Kommentaare pole veel.</li>}
+            {afterComments.length === 0 && <li className="text-sm text-slate-500">Kommentaare pole veel.</li>}
             {afterComments.map((c) => (
               <li key={c.id} className="text-sm text-slate-700 border-b border-slate-100 pb-2">
                 <span className="text-slate-500">
