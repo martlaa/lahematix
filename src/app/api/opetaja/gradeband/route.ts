@@ -23,5 +23,5 @@ export async function POST(req: NextRequest) {
     data: { gradeBand: VALID_BANDS.includes(gradeBand) ? gradeBand : null },
   });
 
-  return NextResponse.redirect(new URL('/opetaja', req.url), 303);
+  return NextResponse.redirect(new URL('/opetaja', process.env.APP_BASE_URL || req.url), 303);
 }

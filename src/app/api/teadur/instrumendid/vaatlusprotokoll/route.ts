@@ -65,5 +65,5 @@ export async function POST(req: NextRequest) {
     create: { authorUserId: session.userId, instrumentCode, answersJson, submittedAt: new Date() },
   });
 
-  return NextResponse.redirect(new URL(`/teadur/instrumendid/vaatlusprotokoll/${plan.id}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/teadur/instrumendid/vaatlusprotokoll/${plan.id}`, process.env.APP_BASE_URL || req.url), 303);
 }

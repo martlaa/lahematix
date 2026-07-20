@@ -18,5 +18,5 @@ export async function POST(req: NextRequest) {
 
   await prisma.sampleLessonPlan.update({ where: { id }, data: { hidden: true } });
 
-  return NextResponse.redirect(new URL('/teadur/naidistunnikavad', req.url), 303);
+  return NextResponse.redirect(new URL('/teadur/naidistunnikavad', process.env.APP_BASE_URL || req.url), 303);
 }

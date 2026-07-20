@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     where: { questionnaireCode_teacherUserId: { questionnaireCode: 'lisa8', teacherUserId: session.userId } },
   });
   if (existing) {
-    return NextResponse.redirect(new URL('/opetaja/kysimustik', req.url), 303);
+    return NextResponse.redirect(new URL('/opetaja/kysimustik', process.env.APP_BASE_URL || req.url), 303);
   }
 
   const form = await req.formData();
@@ -45,5 +45,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL('/opetaja/kysimustik', req.url), 303);
+  return NextResponse.redirect(new URL('/opetaja/kysimustik', process.env.APP_BASE_URL || req.url), 303);
 }

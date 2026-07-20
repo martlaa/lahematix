@@ -175,5 +175,5 @@ export async function POST(req: NextRequest) {
     params.set('inviteErrors', JSON.stringify(errors.slice(0, 25)));
   }
 
-  return NextResponse.redirect(new URL(`/opetaja/opilased?${params.toString()}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/opetaja/opilased?${params.toString()}`, process.env.APP_BASE_URL || req.url), 303);
 }

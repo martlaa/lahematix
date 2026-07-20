@@ -73,5 +73,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Vale tüüp' }, { status: 400 });
   }
 
-  return NextResponse.redirect(new URL('/admin/andmekustutus', req.url), 303);
+  return NextResponse.redirect(new URL('/admin/andmekustutus', process.env.APP_BASE_URL || req.url), 303);
 }

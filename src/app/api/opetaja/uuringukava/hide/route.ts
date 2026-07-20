@@ -23,5 +23,5 @@ export async function POST(req: NextRequest) {
 
   await prisma.researchPlanEntry.update({ where: { id }, data: { hidden: true } });
 
-  return NextResponse.redirect(new URL('/opetaja/uuringukava', req.url), 303);
+  return NextResponse.redirect(new URL('/opetaja/uuringukava', process.env.APP_BASE_URL || req.url), 303);
 }

@@ -29,5 +29,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/teadur/instrumendid/kysimustik/${definition.code}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/teadur/instrumendid/kysimustik/${definition.code}`, process.env.APP_BASE_URL || req.url), 303);
 }

@@ -61,5 +61,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/opilane/nousolek/${token}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/opilane/nousolek/${token}`, process.env.APP_BASE_URL || req.url), 303);
 }

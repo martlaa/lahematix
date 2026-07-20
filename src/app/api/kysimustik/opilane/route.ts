@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     where: { questionnaireCode_studentId: { questionnaireCode, studentId: invite.studentId } },
   });
   if (existing) {
-    return NextResponse.redirect(new URL(`/opilane/kysimustik/${token}`, req.url), 303);
+    return NextResponse.redirect(new URL(`/opilane/kysimustik/${token}`, process.env.APP_BASE_URL || req.url), 303);
   }
 
   const answers = parseQuestionnaireAnswers(definition, form);
@@ -58,5 +58,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/opilane/kysimustik/${token}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/opilane/kysimustik/${token}`, process.env.APP_BASE_URL || req.url), 303);
 }

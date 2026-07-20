@@ -21,7 +21,7 @@ function isAccountRole(role: string): role is AccountRole {
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token');
   if (!token) {
-    return NextResponse.redirect(new URL('/login?error=invalid_token', req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url));
   }
 
   const loginToken = await prisma.loginToken.findUnique({ where: { token }, include: { user: true } });
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     loginToken.expiresAt < new Date() ||
     loginToken.user.status === 'DISABLED'
   ) {
-    return NextResponse.redirect(new URL('/login?error=invalid_token', req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url));
   }
 
   await prisma.loginToken.update({ where: { id: loginToken.id }, data: { usedAt: new Date() } });
@@ -40,10 +40,10 @@ export async function GET(req: NextRequest) {
   const user = loginToken.user;
   if (!isAccountRole(user.role)) {
     // Vanad KOOLIJUHT/LAPSEVANEM kasutajad (enne versiooni 4/5) ei tohi enam sisse logida.
-    return NextResponse.redirect(new URL('/login?error=invalid_token', req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url));
   }
   if (user.role !== 'ADMIN' && (await isAppClosed())) {
-    return NextResponse.redirect(new URL('/login?error=app_closed', req.url));
+    return NextResponse.redirect(new URL('/login?error=app_closed', process.env.APP_BASE_URL || req.url));
   }
 
   if (user.status === 'INVITED') {
@@ -57,5 +57,5 @@ export async function GET(req: NextRequest) {
   session.name = user.name;
   await session.save();
 
-  return NextResponse.redirect(new URL(roleRedirect[user.role] ?? '/', req.url));
+  return NextResponse.redirect(new URL(roleRedirect[user.role] ?? '/', process.env.APP_BASE_URL || req.url));
 }

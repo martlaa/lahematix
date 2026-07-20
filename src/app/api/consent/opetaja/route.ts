@@ -52,5 +52,5 @@ export async function POST(req: NextRequest) {
     data: { actorId: session.userId, action: `CONSENT_${action.toUpperCase()}`, entity: 'User', entityId: session.userId },
   });
 
-  return NextResponse.redirect(new URL('/opetaja/nousolek', req.url), 303);
+  return NextResponse.redirect(new URL('/opetaja/nousolek', process.env.APP_BASE_URL || req.url), 303);
 }

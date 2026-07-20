@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   if (lessonPlan.parts.length >= MAX_PARTS) {
     return NextResponse.redirect(
-      new URL(`/opetaja/tunnikava/${planEntryId}?error=max_parts`, req.url),
+      new URL(`/opetaja/tunnikava/${planEntryId}?error=max_parts`, process.env.APP_BASE_URL || req.url),
       303,
     );
   }
@@ -58,5 +58,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/opetaja/tunnikava/${planEntryId}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/opetaja/tunnikava/${planEntryId}`, process.env.APP_BASE_URL || req.url), 303);
 }

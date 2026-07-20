@@ -30,5 +30,5 @@ export async function POST(req: NextRequest) {
     data: { actorId: session.userId, action: 'DISABLE', entity: 'User', entityId: user.id, meta: user.role },
   });
 
-  return NextResponse.redirect(new URL('/admin', req.url), 303);
+  return NextResponse.redirect(new URL('/admin', process.env.APP_BASE_URL || req.url), 303);
 }

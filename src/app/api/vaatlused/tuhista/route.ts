@@ -21,5 +21,5 @@ export async function POST(req: NextRequest) {
     data: { observerUserId: null },
   });
 
-  return NextResponse.redirect(new URL('/vaatlused', req.url), 303);
+  return NextResponse.redirect(new URL('/vaatlused', process.env.APP_BASE_URL || req.url), 303);
 }

@@ -49,5 +49,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/teadur/instrumendid/test/${definition.code}/hinda`, req.url), 303);
+  return NextResponse.redirect(new URL(`/teadur/instrumendid/test/${definition.code}/hinda`, process.env.APP_BASE_URL || req.url), 303);
 }

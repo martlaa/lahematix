@@ -19,5 +19,5 @@ export async function POST(req: NextRequest) {
     where: { authorUserId: session.userId, instrumentCode },
   });
 
-  return NextResponse.redirect(new URL(redirectTo, req.url), 303);
+  return NextResponse.redirect(new URL(redirectTo, process.env.APP_BASE_URL || req.url), 303);
 }

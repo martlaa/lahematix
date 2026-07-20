@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   if (plan.parts.length >= MAX_PARTS) {
     return NextResponse.redirect(
-      new URL(`/teadur/naidistunnikavad/${sampleLessonPlanId}?error=max_parts`, req.url),
+      new URL(`/teadur/naidistunnikavad/${sampleLessonPlanId}?error=max_parts`, process.env.APP_BASE_URL || req.url),
       303,
     );
   }
@@ -48,5 +48,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/teadur/naidistunnikavad/${sampleLessonPlanId}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/teadur/naidistunnikavad/${sampleLessonPlanId}`, process.env.APP_BASE_URL || req.url), 303);
 }

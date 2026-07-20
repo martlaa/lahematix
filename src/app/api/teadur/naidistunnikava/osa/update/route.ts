@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.redirect(
-    new URL(`/teadur/naidistunnikavad/${part.sampleLessonPlanId}`, req.url),
+    new URL(`/teadur/naidistunnikavad/${part.sampleLessonPlanId}`, process.env.APP_BASE_URL || req.url),
     303,
   );
 }

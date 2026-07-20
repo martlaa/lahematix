@@ -44,5 +44,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL('/admin/eksporditaotlused', req.url), 303);
+  return NextResponse.redirect(new URL('/admin/eksporditaotlused', process.env.APP_BASE_URL || req.url), 303);
 }

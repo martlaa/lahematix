@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     where: { testCode_phase_studentId: { testCode: definition.code, phase, studentId: student.id } },
   });
   if (existing) {
-    return NextResponse.redirect(new URL(`/opilane/test/${token}`, req.url), 303);
+    return NextResponse.redirect(new URL(`/opilane/test/${token}`, process.env.APP_BASE_URL || req.url), 303);
   }
 
   const answers = parseTestAnswers(definition, form);
@@ -64,5 +64,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/opilane/test/${token}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/opilane/test/${token}`, process.env.APP_BASE_URL || req.url), 303);
 }

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   ]);
 
   return NextResponse.redirect(
-    new URL(`/opetaja/tunnikava/${part.lessonPlan.researchPlanEntryId}`, req.url),
+    new URL(`/opetaja/tunnikava/${part.lessonPlan.researchPlanEntryId}`, process.env.APP_BASE_URL || req.url),
     303,
   );
 }

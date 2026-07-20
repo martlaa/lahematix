@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.redirect(
-    new URL(`/opetaja/testi-hindamine/${student.id}/${definition.code}/${phase}`, req.url),
+    new URL(`/opetaja/testi-hindamine/${student.id}/${definition.code}/${phase}`, process.env.APP_BASE_URL || req.url),
     303,
   );
 }

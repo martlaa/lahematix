@@ -38,5 +38,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL('/teadur/eksport', req.url), 303);
+  return NextResponse.redirect(new URL('/teadur/eksport', process.env.APP_BASE_URL || req.url), 303);
 }

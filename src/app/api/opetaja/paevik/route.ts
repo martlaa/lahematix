@@ -47,5 +47,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/opetaja/paevik/${planEntryId}`, req.url), 303);
+  return NextResponse.redirect(new URL(`/opetaja/paevik/${planEntryId}`, process.env.APP_BASE_URL || req.url), 303);
 }
