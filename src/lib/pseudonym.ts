@@ -9,3 +9,8 @@ const generate = customAlphabet(alphabet, 6);
 export function generatePseudonym(): string {
   return `OP-${generate()}`;
 }
+
+/** Genereerib õpetajale-uurijale kordumatu pseudonüümi kujul "OU-4F7A2B". */
+export function generateTeacherPseudonym(): string {
+  return `OU-${generate()}`;
+}

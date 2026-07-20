@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import { sendMail, inviteEmailHtml } from '@/lib/mail';
+import { generateTeacherPseudonym } from '@/lib/pseudonym';
 
 const roleLabels: Record<string, string> = {
   TEADUR: 'teadur',
@@ -34,10 +35,17 @@ export async function POST(req: NextRequest) {
   });
 
   if (role === 'OPETAJA' && schoolId) {
+    let pseudonymCode = generateTeacherPseudonym();
+    for (let i = 0; i < 5; i++) {
+      const exists = await prisma.teacher.findUnique({ where: { pseudonymCode } });
+      if (!exists) break;
+      pseudonymCode = generateTeacherPseudonym();
+    }
+
     await prisma.teacher.upsert({
       where: { userId: user.id },
       update: { schoolId },
-      create: { userId: user.id, schoolId },
+      create: { userId: user.id, schoolId, pseudonymCode },
     });
   }
 

@@ -114,6 +114,16 @@ export default async function TeadurDashboard() {
           </p>
         </Link>
 
+        <Link
+          href="/teadur/eksport"
+          className="block bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:border-brand-400"
+        >
+          <h2 className="font-semibold text-slate-900">Andmete eksport</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Ekspordi pseudonümiseeritud uurimisandmestik CSV või XLSX formaadis, andmestiku kaupa.
+          </p>
+        </Link>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Koole nõusolekuga" value={`${schoolsConsented}/${schoolsTotal}`} />
           <StatCard label="Õpetajaid nõusolekuga" value={`${teacherConsents.length}/${teachersTotal}`} />

@@ -133,6 +133,7 @@ model School {
 
 model Teacher {
   id        String       @id @default(cuid())
+  pseudonymCode String   @unique // nt "OU-4F7A2B" — kasutatakse uurimisandmestikus (eetikataotlus p 4.1)
   userId    String       @unique
   user      User         @relation(fields: [userId], references: [id])
   schoolId  String
