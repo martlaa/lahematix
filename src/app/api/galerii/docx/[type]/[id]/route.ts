@@ -7,7 +7,8 @@ const TYPE_PARAM_MAP: Record<string, GallerySourceType> = {
   katsetund: 'KATSETUND',
 };
 
-export async function GET(req: NextRequest, { params }: { params: { type: string; id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ type: string; id: string }> }) {
+  const params = await props.params;
   const sourceType = TYPE_PARAM_MAP[params.type];
   if (!sourceType) {
     return NextResponse.json({ error: 'Tundmatu tüüp' }, { status: 404 });
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
   const buffer = await buildLessonPlanDocx(detail);
   const filename = `tunnikava_${detail.topic ? detail.topic.replace(/[^a-zA-Z0-9äöüõÄÖÜÕ]+/g, '_').slice(0, 40) : params.id}.docx`;
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

@@ -9,7 +9,8 @@ const PHASE_BY_PURPOSE: Record<string, 'EEL' | 'JAREL'> = {
   TEST_JAREL: 'JAREL',
 };
 
-export default async function OpilaneTestPage({ params }: { params: { token: string } }) {
+export default async function OpilaneTestPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const invite = await prisma.inviteToken.findUnique({
     where: { token: params.token },
     include: { student: { include: { teacher: true } } },

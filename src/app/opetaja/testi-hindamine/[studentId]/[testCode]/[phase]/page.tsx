@@ -8,11 +8,12 @@ import type { TestAnswers } from '@/lib/tests';
 
 const PHASE_LABEL: Record<string, string> = { EEL: 'Eelmõõtmine', JAREL: 'Järelmõõtmine' };
 
-export default async function TestiHindaminePage({
-  params,
-}: {
-  params: { studentId: string; testCode: string; phase: string };
-}) {
+export default async function TestiHindaminePage(
+  props: {
+    params: Promise<{ studentId: string; testCode: string; phase: string }>;
+  }
+) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
 

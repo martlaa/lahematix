@@ -1,6 +1,9 @@
 import { getGalleryItems, type GalleryItem } from '@/lib/gallery';
 import { PublicNav } from '@/components/PublicNav';
 
+// Loeb andmebaasist elavat andmet — ei tohi ehitusajal staatiliselt eelrenderdada.
+export const dynamic = 'force-dynamic';
+
 const METHOD_LABEL: Record<string, string> = {
   BOALER: 'Boaler',
   LILJEDAHL: 'Liljedahl',
@@ -20,18 +23,19 @@ const SOURCE_TYPE_LABEL: Record<string, string> = {
 
 type SortField = 'gradeBand' | 'method' | 'author' | 'sourceType' | 'publishedAt';
 
-export default async function GaleriiPage({
-  searchParams,
-}: {
-  searchParams: {
-    gradeBand?: string;
-    method?: string;
-    sourceType?: string;
-    author?: string;
-    sort?: string;
-    dir?: string;
-  };
-}) {
+export default async function GaleriiPage(
+  props: {
+    searchParams: Promise<{
+      gradeBand?: string;
+      method?: string;
+      sourceType?: string;
+      author?: string;
+      sort?: string;
+      dir?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   let items = await getGalleryItems();
 
   if (searchParams.gradeBand) {

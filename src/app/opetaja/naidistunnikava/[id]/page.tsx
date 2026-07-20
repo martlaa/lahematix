@@ -16,7 +16,8 @@ const GRADE_BAND_LABEL: Record<string, string> = {
   '10-12': '10.–12. klass',
 };
 
-export default async function NaidistunnikavaVaatePage({ params }: { params: { id: string } }) {
+export default async function NaidistunnikavaVaatePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || (session.role !== 'OPETAJA' && session.role !== 'TEADUR')) redirect('/login');
 

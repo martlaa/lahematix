@@ -6,11 +6,12 @@ import { Alert, StatusDot, StatusLegend, questionnaireStatus } from '@/component
 
 type UserSortField = 'name' | 'email' | 'role' | 'status' | 'lastLogin';
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: { imported?: string; errors?: string; sort?: string; dir?: string };
-}) {
+export default async function AdminPage(
+  props: {
+    searchParams: Promise<{ imported?: string; errors?: string; sort?: string; dir?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await getSession();
   if (!session.userId || session.role !== 'ADMIN') redirect('/login');
 

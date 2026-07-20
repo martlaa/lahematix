@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { FormShell, Alert, Checkbox, TextInput, Field, PrimaryButton, SecondaryLinkButton } from '@/components/ui';
 import { OpilaneConsentInfo } from '@/components/consentTexts';
 
-export default async function OpilaneNousolekPage({ params }: { params: { token: string } }) {
+export default async function OpilaneNousolekPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const invite = await prisma.inviteToken.findUnique({
     where: { token: params.token },
     include: { student: { include: { consentRecords: { orderBy: { createdAt: 'desc' }, take: 1 } } } },

@@ -20,7 +20,8 @@ const TYPE_PARAM_MAP: Record<string, GallerySourceType> = {
   katsetund: 'KATSETUND',
 };
 
-export default async function GaleriiDetailPage({ params }: { params: { type: string; id: string } }) {
+export default async function GaleriiDetailPage(props: { params: Promise<{ type: string; id: string }> }) {
+  const params = await props.params;
   const sourceType = TYPE_PARAM_MAP[params.type];
   if (!sourceType) notFound();
 

@@ -6,7 +6,8 @@ import { isGatedDataset } from '@/lib/export/types';
 import { toCsv } from '@/lib/export/csv';
 import { toXlsxBuffer } from '@/lib/export/xlsx';
 
-export async function GET(req: NextRequest, { params }: { params: { dataset: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ dataset: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') {
     return NextResponse.json({ error: 'Ligipääs keelatud' }, { status: 403 });
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: { dataset: str
 
   if (format === 'xlsx') {
     const buffer = await toXlsxBuffer(dataset, definition.label);
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

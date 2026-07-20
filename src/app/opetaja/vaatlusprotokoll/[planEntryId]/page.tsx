@@ -10,7 +10,8 @@ import {
   type ObservationSummary,
 } from '@/lib/observation/lisa6';
 
-export default async function OpetajaVaatlusprotokollPage({ params }: { params: { planEntryId: string } }) {
+export default async function OpetajaVaatlusprotokollPage(props: { params: Promise<{ planEntryId: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
 

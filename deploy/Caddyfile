@@ -1,0 +1,12 @@
+# Caddy automatically obtains + renews a Let's Encrypt certificate for this
+# domain, as long as the domain's A record points at this server and ports
+# 80/443 are open. Change the hostname here AND APP_BASE_URL in .env together.
+
+{
+	# ACME account email (change to a lahemate.ee address if you prefer).
+	email tammets@gmail.com
+}
+
+app.lahemate.ee {
+	reverse_proxy app:3000
+}

@@ -13,7 +13,8 @@ const METHOD_LABEL: Record<string, string> = {
   TOH: 'Toh',
 };
 
-export default async function OpetajaPaevikPage({ params }: { params: { planEntryId: string } }) {
+export default async function OpetajaPaevikPage(props: { params: Promise<{ planEntryId: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
 

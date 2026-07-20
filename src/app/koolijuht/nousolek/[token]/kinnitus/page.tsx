@@ -3,7 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { PrintableConsent } from '@/components/PrintableConsent';
 import { KoolijuhtConsentInfo } from '@/components/consentTexts';
 
-export default async function KoolijuhtKinnitusPage({ params }: { params: { token: string } }) {
+export default async function KoolijuhtKinnitusPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const invite = await prisma.inviteToken.findUnique({
     where: { token: params.token },
     include: { school: true },

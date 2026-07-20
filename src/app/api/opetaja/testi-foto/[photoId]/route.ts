@@ -15,7 +15,8 @@ const MIME_BY_EXT: Record<string, string> = {
   '.heic': 'image/heic',
 };
 
-export async function GET(req: NextRequest, { params }: { params: { photoId: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ photoId: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') {
     return NextResponse.json({ error: 'Ligipääs keelatud' }, { status: 403 });
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: { photoId: str
   const ext = path.extname(photo.filePath).toLowerCase();
   const contentType = MIME_BY_EXT[ext] ?? 'application/octet-stream';
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': contentType,
       'Content-Disposition': `inline; filename="${photo.originalName.replace(/"/g, '')}"`,

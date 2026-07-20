@@ -6,7 +6,8 @@ import { Alert, PrimaryButton } from '@/components/ui';
 import { getTestByCode } from '@/lib/tests';
 import type { TestAnswers } from '@/lib/tests';
 
-export default async function TeadurTestHindaminePage({ params }: { params: { testCode: string } }) {
+export default async function TeadurTestHindaminePage(props: { params: Promise<{ testCode: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 

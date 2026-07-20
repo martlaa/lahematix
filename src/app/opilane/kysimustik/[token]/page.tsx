@@ -9,7 +9,8 @@ const CODE_BY_PURPOSE: Record<string, string> = {
   QUESTIONNAIRE_JAREL: 'lisa4-jarel',
 };
 
-export default async function OpilaneKysimustikPage({ params }: { params: { token: string } }) {
+export default async function OpilaneKysimustikPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const invite = await prisma.inviteToken.findUnique({
     where: { token: params.token },
     include: { student: true },

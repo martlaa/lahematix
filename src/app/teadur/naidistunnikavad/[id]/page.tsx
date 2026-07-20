@@ -17,13 +17,14 @@ const METHOD_OPTIONS = [
   { value: 'TOH', letter: 'T', label: 'Toh' },
 ] as const;
 
-export default async function TeadurNaidistunnikavaPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { error?: string };
-}) {
+export default async function TeadurNaidistunnikavaPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 

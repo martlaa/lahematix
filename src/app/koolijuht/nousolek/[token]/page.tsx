@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { FormShell, Alert, PrimaryButton, SecondaryLinkButton } from '@/components/ui';
 import { KoolijuhtConsentInfo } from '@/components/consentTexts';
 
-export default async function KoolijuhtNousolekTokenPage({ params }: { params: { token: string } }) {
+export default async function KoolijuhtNousolekTokenPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const invite = await prisma.inviteToken.findUnique({
     where: { token: params.token },
     include: { school: { include: { teachers: { include: { user: true } } } } },

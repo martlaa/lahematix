@@ -6,7 +6,8 @@ import { FormShell, Alert } from '@/components/ui';
 import { TestForm } from '@/components/TestForm';
 import { getTestByCode } from '@/lib/tests';
 
-export default async function TeadurTestKatsetusPage({ params }: { params: { testCode: string } }) {
+export default async function TeadurTestKatsetusPage(props: { params: Promise<{ testCode: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 

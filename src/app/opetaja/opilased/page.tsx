@@ -5,11 +5,12 @@ import { Header } from '@/components/Header';
 import { Alert, StatusDot, StatusLegend, questionnaireStatus } from '@/components/ui';
 import { getTestByGradeBand } from '@/lib/tests';
 
-export default async function OpilasedPage({
-  searchParams,
-}: {
-  searchParams: { imported?: string; errors?: string; sent?: string; skipped?: string; inviteErrors?: string };
-}) {
+export default async function OpilasedPage(
+  props: {
+    searchParams: Promise<{ imported?: string; errors?: string; sent?: string; skipped?: string; inviteErrors?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
 

@@ -6,7 +6,8 @@ import { FormShell, Alert } from '@/components/ui';
 import { QuestionnaireForm } from '@/components/QuestionnaireForm';
 import { getQuestionnaireByCode } from '@/lib/questionnaires';
 
-export default async function TeadurKysimustikKatsetusPage({ params }: { params: { code: string } }) {
+export default async function TeadurKysimustikKatsetusPage(props: { params: Promise<{ code: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 

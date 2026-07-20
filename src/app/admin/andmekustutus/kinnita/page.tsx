@@ -4,11 +4,12 @@ import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert } from '@/components/ui';
 
-export default async function AdminAndmekustutusKinnitaPage({
-  searchParams,
-}: {
-  searchParams: { type?: string; id?: string };
-}) {
+export default async function AdminAndmekustutusKinnitaPage(
+  props: {
+    searchParams: Promise<{ type?: string; id?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await getSession();
   if (!session.userId || session.role !== 'ADMIN') redirect('/login');
 

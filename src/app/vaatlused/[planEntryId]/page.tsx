@@ -11,7 +11,8 @@ const METHOD_LABEL: Record<string, string> = {
   TOH: 'Toh',
 };
 
-export default async function VaatlusDetailPage({ params }: { params: { planEntryId: string } }) {
+export default async function VaatlusDetailPage(props: { params: Promise<{ planEntryId: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || (session.role !== 'OPETAJA' && session.role !== 'TEADUR')) redirect('/login');
 

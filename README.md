@@ -1,160 +1,194 @@
 # LAHEMATIX
 
-LAHEMATIX on LAHEMATE uurimisprojekti veebirakendus matemaatilise probleemilahenduse
-õpetamise sekkumisuuringu andmete kogumiseks: nõusolekud, küsimustikud, testid,
-tunnikavad, tunnivaatlused ja uurijapäevikud ühes kohas — õpilastele, õpetajatele-
-uurijatele, koolijuhtidele, lapsevanematele, teaduritele ja projekti adminile.
+LAHEMATIX is the web application for the **LAHEMATE** research project — an
+intervention study on teaching mathematical problem-solving. It gathers the
+study's data in one place: consents, questionnaires, tests, lesson plans,
+lesson observations and researcher journals — for students, teacher-researchers,
+school leaders, parents, researchers and the project admin.
 
-Rakendus on ehitatud [Next.js](https://nextjs.org) (App Router), [PostgreSQL](https://www.postgresql.org)
-ja [Prisma](https://www.prisma.io) peale ning töötab ilma kliendipoolse JavaScriptita —
-kõik vormid ja tegevused käivad tavaliste HTML-vormide ja serveripoolsete
-marsruutidena.
+The app is built with **Next.js (App Router, server-side rendered)**,
+**PostgreSQL** and **Prisma**, and works **without client-side JavaScript** —
+every form and action runs as a plain HTML form backed by a server route.
 
-## Praegune seis
+## Tech stack
 
-Valmis on Faasid 1–5:
-
-| Faas | Sisu |
+| Layer | Technology |
 |---|---|
-| 1 | Autentimine (e-posti-põhine ühekordne link) ning koolide/kasutajate/nõusolekute haldus |
-| 2 | Õpilase ja õpetaja küsimustikud, matemaatilise probleemilahenduse testid (koos hindamisega), uurijapäevik, õpetaja isiklik uuringukava |
-| 3 | Struktureeritud tunnikavad, sellest dünaamiliselt genereeritud tunnivaatlusprotokoll, tunnivaatluste broneerimise turg, teaduri näidistunnikavad ja instrumentide katsetuskeskkond |
-| 4 | Pseudonümiseeritud andmete eksport (CSV/XLSX), ekspordilubade kinnitamine, andmete kustutamisvoog ja rakenduse sulgemisvoog |
-| 5 | Avalik tunnikavade galerii (CC BY 4.0), filtreeritav/sorteeritav, koos DOCX-eksportiga |
+| Framework | Next.js 16 (App Router, SSR), React 19 |
+| Language | TypeScript 5 |
+| Database | PostgreSQL 16 via Prisma 6 |
+| Styling | Tailwind CSS 4 |
+| Auth / sessions | iron-session (email magic links) |
+| Email | nodemailer (Zone SMTP) |
+| Validation | zod |
+| Local dev | DDEV (Docker) |
+| Production | Hetzner VPS + Docker Compose, deployed via GitHub Actions |
 
-Pooleli on Faas 6 — tootmisvalmidus (VPS-ile paigaldamine, päris SMTP, WCAG
-kiirülevaatus). Vt allpool jaotist ["Tootmisse viimine"](#tootmisse-viimine).
+## User roles
 
-## Kasutajarollid
-
-| Roll | Autentimine | Peamised tegevused |
+| Role | Authentication | Main actions |
 |---|---|---|
-| Admin | E-post (ühekordne link) | Koolide/kasutajate haldus, ekspordilubade kinnitamine, andmete kustutamine, rakenduse sulgemine |
-| Teadur | E-post (ühekordne link) | Nõusolekute jälgimine, näidistunnikavad, instrumentide katsetamine, andmete eksport, tunnivaatlused |
-| Õpetaja-uurija | E-post (ühekordne link) | Nõusolek, õpilaste nimekiri, uuringukava, tunnikavad, uurijapäevik, küsimustik |
-| Õpilane | Ühekordne token-link, ilma kontota | Nõusolek (15+), test, küsimustik |
-| Lapsevanem | E-post (ühekordne link) | Nõusoleku andmine/tagasivõtmine lapse eest |
-| Koolijuht | Ühekordne token-link, ilma kontota | Kooli nõusolek |
-| Külaline (ilma kontota) | — | Avalik tunnikavade galerii (`/galerii`) |
+| Admin | Email (magic link) | Manage schools/users, approve export permissions, delete data, close the app |
+| Researcher | Email (magic link) | Track consents, sample lesson plans, try instruments, export data, observations |
+| Teacher-researcher | Email (magic link) | Consent, student list, study plan, lesson plans, journal, questionnaire |
+| Student | One-time token link (no account) | Consent (15+), test, questionnaire |
+| Parent | Email (magic link) | Give/withdraw consent on behalf of a child |
+| School leader | One-time token link (no account) | School consent |
+| Guest (no account) | — | Public lesson-plan gallery (`/galerii`) |
 
-## Kiire start (kohalik arendus)
+---
 
-Vajad: [Node.js](https://nodejs.org) 20+ ja kas [Docker](https://www.docker.com/products/docker-desktop/)
-või kohalikult paigaldatud PostgreSQL 16.
+## Local development (DDEV)
+
+Local development runs entirely in [DDEV](https://ddev.com) — both PostgreSQL and
+the Next.js app run in containers, so you don't need Node or Postgres installed on
+the host. You only need **DDEV** and **Docker**.
+
+### First-time setup
 
 ```bash
-git clone git@github.com:martlaa/lahematix.git
+git clone https://github.com/martlaa/lahematix.git
 cd lahematix
 
-npm install
-
+# Create your local env file (gitignored)
 cp .env.example .env
-# Ava .env ja täida vähemalt SESSION_SECRET (vt fail — genereeri nt
-# `openssl rand -base64 32`). SMTP väljad võib esialgu tühjaks jätta:
-# kutsete saatmine ebaõnnestub vaikimisi ainult logisse kirjutades ja
-# sisselogimislingid ilmuvad arenduses konsooli (vt allpool).
+# Edit .env: the DDEV DATABASE_URL is already correct; set a SESSION_SECRET
+# (generate one with: openssl rand -base64 32). SMTP can stay as placeholders —
+# in dev, login links are printed to the log instead of emailed.
 
-docker compose up -d db        # KUI kasutad Dockerit
-# muidu: paigalda PostgreSQL ise ja muuda .env failis DATABASE_URL
+ddev start                                 # starts Postgres + the Next.js app
 
-npx prisma migrate deploy
-npm run seed                   # loob admin@lahemate.ee kasutaja
-
-npm run dev
+ddev exec npm ci                           # install deps INSIDE the container
+ddev exec npx prisma migrate deploy        # apply migrations
+ddev exec npm run seed                     # create the admin@lahemate.ee user
+ddev restart                               # reload the dev server with deps ready
 ```
 
-Ava brauseris **http://localhost:3000** — sisselogimata külastajale kuvatakse
-avalik tunnikavade galerii; sisseloginud kasutaja suunatakse oma rolli töölauale.
+The app is served at **https://lahematix.ddev.site:3000** — logged-out visitors
+see the public gallery; logged-in users are routed to their role dashboard.
 
-Logi esimesena sisse admin-kontoga (`admin@lahemate.ee`). Kuna SMTP pole veel
-seadistatud, ei jõua sisselogimislink e-posti — see ilmub `npm run dev`
-terminaliaknasse reana `[DEV] Sisselogimislink kasutajale ...`. Kopeeri link
-brauserisse.
+> **Note on `node_modules`:** always install inside the container
+> (`ddev exec npm ci`), never on the host. Prisma ships a platform-specific query
+> engine, and the container is Linux. If you ever run `npm install` on the host,
+> re-run `ddev exec npm ci` to restore the Linux binaries.
 
-Admin-kontolt saab luua kooli, kutsuda õpetajaid/teadureid ning jälgida kogu
-uuringu seisu.
+### Logging in locally
 
-## Keskkonnamuutujad
+SMTP isn't configured in dev, so the magic link is written to the log instead of
+emailed:
 
-Vt `.env.example` täieliku loeteluga koos selgitustega. Kokkuvõtvalt:
+1. Open `https://lahematix.ddev.site:3000/login` and enter `admin@lahemate.ee`.
+2. Read the link from the log:
+   ```bash
+   ddev logs -s web | grep Sisselogimislink
+   ```
+3. Paste it into the browser — you're in as admin.
 
-| Muutuja | Kirjeldus |
+From the admin account you can create a school, invite teachers/researchers and
+follow the whole study.
+
+### Handy commands
+
+```bash
+ddev exec npx prisma migrate deploy   # apply new migrations
+ddev exec npm run seed                # re-seed the admin user
+ddev exec npx prisma studio           # browse the database
+ddev exec npm run build               # production build (catches type errors)
+ddev restart                          # reload after dependency/config changes
+ddev logs -s web -f                   # tail the app log
+```
+
+## Environment variables
+
+See `.env.example` for the full list. In short:
+
+| Variable | Description |
 |---|---|
-| `DATABASE_URL` | PostgreSQL ühendusstring |
-| `SESSION_SECRET` | Sessiooni krüpteerimisvõti (iron-session) — vähemalt 32 tähemärki |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | E-posti saatmise seaded (kutsed, sisselogimislingid) |
-| `APP_BASE_URL` | Rakenduse avalik aadress — kasutatakse linkide genereerimisel |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | Session encryption key (iron-session) — at least 32 chars |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | Email settings (invites, login links) |
+| `APP_BASE_URL` | The app's public URL — used when generating links |
 
-## Projekti struktuur
+## Project structure
 
 ```
-prisma/schema.prisma        andmemudel (kõik Faas 1–5 mudelid)
-prisma/migrations/          migratsioonid (rakenda: npx prisma migrate deploy)
-prisma/seed.ts              loob esimese admin-kasutaja
+prisma/schema.prisma        data model (all phase 1–5 models)
+prisma/migrations/          migrations (apply: npx prisma migrate deploy)
+prisma/seed.ts              creates the first admin user
 
 src/lib/
-  session.ts                 sessioonihaldus (iron-session)
-  prisma.ts                  andmebaasiühenduse singleton
-  mail.ts                    e-kirjade saatmine (SMTP)
-  pseudonym.ts                õpilaste/õpetajate pseudonüümikoodide genereerimine
-  appSettings.ts               rakenduse sulgemise/avamise olek
-  gallery.ts, galleryDocx.ts    avaliku galerii andmed ja DOCX-genereerimine
-  export/                      teaduri andmeekspordi CSV/XLSX loogika
+  session.ts                 session handling (iron-session)
+  prisma.ts                  database connection singleton
+  mail.ts                    sending email (SMTP)
+  pseudonym.ts               student/teacher pseudonym-code generation
+  appSettings.ts             app closed/open state
+  gallery.ts, galleryDocx.ts public gallery data and DOCX generation
+  export/                    researcher data-export CSV/XLSX logic
   questionnaires/, tests/, journal/, lessonplan/, observation/
-                                — küsimustike/testide/päeviku/tunnikavade/
-                                  vaatlusprotokolli sisu (hardcoded, Lisa 4–11)
+                             questionnaire/test/journal/lesson-plan/observation
+                             content (hardcoded, appendices 4–11)
 
-src/components/               jagatud UI-komponendid (vormirenderdajad jm)
+src/components/              shared UI components (form renderers, etc.)
 
 src/app/
-  admin/                      koolide/kasutajate haldus, ekspordilubade
-                              kinnitamine, andmete kustutamine, sulgemisvoog
-  teadur/                     jälgimisvaade, näidistunnikavad, instrumentide
-                              katsetuskeskkond, andmete eksport
-  opetaja/                    töölaud, nõusolek, õpilaste nimekiri (Lisa 2/CSV),
-                              uuringukava (Lisa 10), tunnikava (Lisa 11),
-                              päevik (Lisa 7), küsimustik (Lisa 8)
+  admin/                     schools/users management, export approvals,
+                             data deletion, closing flow
+  teadur/                    researcher tracking view, sample lesson plans,
+                             instrument sandbox, data export
+  opetaja/                   teacher dashboard, consent, student list,
+                             study plan, lesson plan, journal, questionnaire
   koolijuht/, lapsevanem/, opilane/
-                              token-põhised (enamik ilma kontota) vaated
-  vaatlused/                  tunnivaatluste broneerimise turg + protokoll
-  galerii/                    avalik tunnikavade galerii (ilma kontota)
-  api/                        kõik vastavad API-marsruudid
+                             token-based (mostly account-less) views
+  vaatlused/                 lesson-observation booking market + protocol
+  galerii/                   public lesson-plan gallery (no account)
+  api/                       all corresponding API routes
 ```
 
-## Tootmisse viimine
+---
 
-Rakendus on konteineritud (`Dockerfile`, `docker-compose.yml`):
+## Deployment
 
-```bash
-# Serveris:
-git clone git@github.com:martlaa/lahematix.git
-cd lahematix
-cp .env.example .env
-# täida .env päris SESSION_SECRET, SMTP ja APP_BASE_URL väärtustega
+Production runs on a **Hetzner Cloud VPS** with Docker Compose. Merging to the
+**`production`** branch triggers a GitHub Actions workflow that SSHes into the
+server and redeploys automatically. **Zone** is used only for the domain (DNS)
+and email (SMTP).
 
-docker compose up -d --build
-docker compose exec app npx prisma migrate deploy
-docker compose exec app npm run seed
+```
+merge → production ──▶ GitHub Actions ──ssh──▶ Hetzner VPS
+                                                 ├─ git reset --hard origin/production
+                                                 ├─ docker compose build
+                                                 ├─ prisma migrate deploy
+                                                 └─ docker compose up -d app caddy
+                                                      └─ Caddy → automatic HTTPS
 ```
 
-Rakendus jookseb seejärel pordil 3000. Tootmises on lisaks vaja:
+The production stack (`docker-compose.prod.yml`) runs four services: PostgreSQL,
+a one-shot migration runner, the Next.js app, and **Caddy** as a reverse proxy
+with automatic Let's Encrypt certificates.
 
-- **Reverse proxy + SSL** — nt Nginx koos Let's Encrypt sertifikaadiga domeeni jaoks.
-- **Päris SMTP seaded** — ilma nendeta ei jõua sisselogimislingid ega kutsed kasutajateni.
-- **Andmebaasi varundus** — `db_data` Docker-köite regulaarne backup.
+**Full step-by-step setup — creating the server, DNS, secrets and the first
+deploy — is in [`deploy/README.md`](deploy/README.md).**
 
-## Tõrkeotsing
+### Everyday deploys
 
-- **"Can't reach database"** — kontrolli, et `docker compose up -d db` jookseb ja
-  `.env` failis `DATABASE_URL` klapib `docker-compose.yml` seadetega.
-- **E-kirju ei saadeta** — kontrolli SMTP andmeid `.env` failis. Kohalikus
-  arenduses töötab rakendus ka ilma — sisselogimislingid/kutsed ilmuvad
-  serveri logisse (`[DEV] ...`), viga ise ei takista kasutamist.
-- **"SESSION_SECRET is not defined"** — kontrolli, et `.env` fail on olemas
-  (mitte ainult `.env.example`) ja `SESSION_SECRET` on täidetud.
+Work on `main`, open a PR, and when ready merge `main` → `production` (or push to
+`production`). The GitHub Action redeploys automatically; watch it under the
+repository's **Actions** tab.
 
-## Litsents
+## Troubleshooting
 
-Lähtekood on avaldatud MIT litsentsi all (vt `LICENSE`). Avalikus tunnikavade
-galeriis (`/galerii`) avaldatud tunnikavade sisu käib eraldi CC BY 4.0
-litsentsi all — vt iga tunnikava detailvaadet.
+- **"Can't reach database"** — make sure `ddev start` is running and the
+  `DATABASE_URL` in `.env` matches the DDEV Postgres service.
+- **No emails sent** — check the SMTP settings in `.env`. In local development
+  the app works without them: login links and invites appear in the log
+  (`ddev logs -s web`), so this doesn't block usage.
+- **"SESSION_SECRET is not defined"** — make sure `.env` exists (not just
+  `.env.example`) and `SESSION_SECRET` is filled in.
+- **Prisma errors after a host `npm install`** — re-run `ddev exec npm ci` to
+  restore the container's Linux query engine.
+
+## License
+
+The source code is released under the MIT license (see `LICENSE`). Lesson-plan
+content published in the public gallery (`/galerii`) is licensed separately under
+CC BY 4.0 — see each lesson plan's detail view.

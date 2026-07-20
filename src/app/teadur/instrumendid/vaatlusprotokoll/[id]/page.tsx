@@ -15,7 +15,8 @@ import {
 const INCIDENT_ROW_COUNT = 8;
 const RATING_VALUES = [1, 2, 3, 4];
 
-export default async function TeadurVaatlusprotokollKatsetusPage({ params }: { params: { id: string } }) {
+export default async function TeadurVaatlusprotokollKatsetusPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 

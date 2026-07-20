@@ -16,7 +16,8 @@ import {
 const INCIDENT_ROW_COUNT = 8;
 const RATING_VALUES = [1, 2, 3, 4];
 
-export default async function VaatlusProtokollPage({ params }: { params: { planEntryId: string } }) {
+export default async function VaatlusProtokollPage(props: { params: Promise<{ planEntryId: string }> }) {
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || (session.role !== 'OPETAJA' && session.role !== 'TEADUR')) redirect('/login');
 

@@ -18,13 +18,14 @@ const METHOD_LABEL: Record<string, string> = {
   TOH: 'Toh',
 };
 
-export default async function OpetajaTunnikavaPage({
-  params,
-  searchParams,
-}: {
-  params: { planEntryId: string };
-  searchParams: { error?: string };
-}) {
+export default async function OpetajaTunnikavaPage(
+  props: {
+    params: Promise<{ planEntryId: string }>;
+    searchParams: Promise<{ error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const session = await getSession();
   if (!session.userId || session.role !== 'OPETAJA') redirect('/login');
 
