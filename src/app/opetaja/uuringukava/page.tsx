@@ -104,10 +104,10 @@ export default async function OpetajaUuringukavaPage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
           <h2 className="font-semibold text-slate-900 mb-3">Katsetunnid</h2>
           {entries.length === 0 ? (
-            <p className="text-sm text-slate-400">Ridu pole veel lisatud.</p>
+            <p className="text-sm text-slate-500">Ridu pole veel lisatud.</p>
           ) : (
             <form>
-              <table className="w-full text-xs min-w-[900px]">
+              <table className="w-full text-xs min-w-[860px]">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-200">
                     <th className="py-1 pr-2">Kuupäev</th>
@@ -120,10 +120,11 @@ export default async function OpetajaUuringukavaPage() {
                     <th className="py-1 pr-2">Teema</th>
                     <th className="py-1 pr-2">Tunnikava</th>
                     <th className="py-1 pr-2 text-center">Vaatlus</th>
-                    <th className="py-1 pr-2">Vaatleja</th>
+                    <th className="py-1 pr-2" title="Muutub lingiks, kui vaatleja on oma vaatlusprotokolli sinuga jaganud">
+                      Vaatleja
+                    </th>
                     <th className="py-1 pr-2"></th>
                     <th className="py-1 pr-2 text-center">Uurijapäevik</th>
-                    <th className="py-1 pr-2 text-center">Vaatlusprotokoll</th>
                     <th className="py-1 pr-2 text-center" title="Avalda tunnikava avalikus galeriis (CC-BY)">
                       Galerii
                     </th>
@@ -135,13 +136,17 @@ export default async function OpetajaUuringukavaPage() {
                     const methodLetters = METHOD_OPTIONS.filter((m) => e.appliedMethods.includes(m.value))
                       .map((m) => m.letter)
                       .join('/');
+                    const publishedForObserver = Boolean(
+                      e.observerUserId &&
+                        e.lessonPlan?.observationProtocols.some((op) => op.observerUserId === e.observerUserId),
+                    );
 
                     if (e.hidden) {
                       return (
-                        <tr key={e.id} className="border-b border-slate-100 align-top text-slate-400">
+                        <tr key={e.id} className="border-b border-slate-100 align-top text-slate-500">
                           <td className="py-2 pr-2 w-16">{e.date.toLocaleDateString('et-EE')}</td>
-                          <td className="py-2 pr-2 w-10">{e.startTime ?? '—'}</td>
-                          <td className="py-2 pr-2 w-8">{e.durationMin ?? '—'}</td>
+                          <td className="py-2 pr-2 w-20">{e.startTime ?? '—'}</td>
+                          <td className="py-2 pr-2 w-16">{e.durationMin ?? '—'}</td>
                           <td className="py-2 pr-2 w-8">{e.studentGroup ?? '—'}</td>
                           <td className="py-2 pr-2">{methodLetters || '—'}</td>
                           <td className="py-2 pr-2">{e.topic ?? '—'}</td>
@@ -158,7 +163,22 @@ export default async function OpetajaUuringukavaPage() {
                           </td>
                           <td className="py-2 pr-2 text-center">{e.expectingObserver ? 'Jah' : 'Ei'}</td>
                           <td className="py-2 pr-2">
-                            {e.observerUser?.name ?? (e.expectingObserver ? 'vaba' : '—')}
+                            {e.observerUser ? (
+                              publishedForObserver ? (
+                                <a
+                                  href={`/opetaja/vaatlusprotokoll/${e.id}`}
+                                  className="text-brand-600 underline hover:no-underline"
+                                >
+                                  {e.observerUser.name}
+                                </a>
+                              ) : (
+                                e.observerUser.name
+                              )
+                            ) : e.expectingObserver ? (
+                              'vaba'
+                            ) : (
+                              '—'
+                            )}
                           </td>
                           <td className="py-2 pr-2"></td>
                           <td className="py-2 pr-2 text-center">
@@ -171,18 +191,6 @@ export default async function OpetajaUuringukavaPage() {
                             >
                               {e.journalEntry ? 'Muuda' : 'Lisa'}
                             </a>
-                          </td>
-                          <td className="py-2 pr-2 text-center">
-                            {e.lessonPlan && e.lessonPlan.observationProtocols.length > 0 ? (
-                              <a
-                                href={`/opetaja/vaatlusprotokoll/${e.id}`}
-                                className="inline-block rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 bg-green-50 text-green-600"
-                              >
-                                Vaata ({e.lessonPlan.observationProtocols.length})
-                              </a>
-                            ) : (
-                              '—'
-                            )}
                           </td>
                           <td className="py-2 pr-2 text-center">
                             {e.lessonPlan?.publishedToGalleryAt ? 'Avaldatud' : '—'}
@@ -218,7 +226,7 @@ export default async function OpetajaUuringukavaPage() {
                             type="time"
                             name={`startTime.${e.id}`}
                             defaultValue={e.startTime ?? ''}
-                            className="w-10 rounded border border-slate-300 px-1 py-1 text-xs"
+                            className="w-20 rounded border border-slate-300 px-1 py-1 text-xs"
                           />
                         </td>
                         <td className="py-2 pr-2">
@@ -227,7 +235,7 @@ export default async function OpetajaUuringukavaPage() {
                             name={`durationMin.${e.id}`}
                             defaultValue={e.durationMin ?? undefined}
                             min="1"
-                            className="w-8 rounded border border-slate-300 px-1 py-1 text-xs"
+                            className="w-16 rounded border border-slate-300 px-1 py-1 text-xs"
                           />
                         </td>
                         <td className="py-2 pr-2">
@@ -282,7 +290,22 @@ export default async function OpetajaUuringukavaPage() {
                           />
                         </td>
                         <td className="py-2 pr-2">
-                          {e.observerUser?.name ?? (e.expectingObserver ? 'vaba' : '—')}
+                          {e.observerUser ? (
+                            publishedForObserver ? (
+                              <a
+                                href={`/opetaja/vaatlusprotokoll/${e.id}`}
+                                className="text-brand-600 underline hover:no-underline"
+                              >
+                                {e.observerUser.name}
+                              </a>
+                            ) : (
+                              e.observerUser.name
+                            )
+                          ) : e.expectingObserver ? (
+                            'vaba'
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="py-2 pr-2">
                           <button
@@ -305,18 +328,6 @@ export default async function OpetajaUuringukavaPage() {
                           >
                             {e.journalEntry ? 'Muuda' : 'Lisa'}
                           </a>
-                        </td>
-                        <td className="py-2 pr-2 text-center">
-                          {e.lessonPlan && e.lessonPlan.observationProtocols.length > 0 ? (
-                            <a
-                              href={`/opetaja/vaatlusprotokoll/${e.id}`}
-                              className="inline-block rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 bg-green-100 text-green-700"
-                            >
-                              Vaata ({e.lessonPlan.observationProtocols.length})
-                            </a>
-                          ) : (
-                            '—'
-                          )}
                         </td>
                         <td className="py-2 pr-2 text-center">
                           <input
