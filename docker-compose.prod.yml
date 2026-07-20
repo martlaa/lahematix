@@ -61,7 +61,10 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Mount the directory (not the single file) so that a `git reset` — which
+      # replaces the Caddyfile with a new inode — is actually seen by the
+      # container. A single-file bind mount would pin the old inode.
+      - ./deploy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
 
