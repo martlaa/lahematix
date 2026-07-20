@@ -3,8 +3,8 @@
 # 80/443 are open. Change the hostname here AND APP_BASE_URL in .env together.
 
 {
-	# ACME account email (change to a lahemate.ee address if you prefer).
-	email tammets@gmail.com
+	# ACME account email (Let's Encrypt expiry notices).
+	email info@lahemate.ee
 }
 
 uuring.lahemate.ee {
