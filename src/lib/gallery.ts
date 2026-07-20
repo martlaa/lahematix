@@ -1,0 +1,152 @@
+import { prisma } from '@/lib/prisma';
+import type { Method } from '@prisma/client';
+
+export type GallerySourceType = 'NAIDISTUND' | 'KATSETUND';
+
+export interface GalleryItem {
+  id: string; // "naidistund:<id>" | "katsetund:<id>" — unikaalne üle mõlema allika
+  sourceType: GallerySourceType;
+  refId: string;
+  gradeBand: string | null;
+  appliedMethods: Method[];
+  topic: string | null;
+  authorName: string;
+  authorRoleLabel: string;
+  durationMin: number | null;
+  partsCount: number;
+  publishedAt: Date;
+}
+
+// Avalik tunnikavade galerii (Faas 5): koondab teaduri näidistunnikavad
+// (automaatselt avalikud, kui hidden=false) ja õpetajate katsetunnikavad
+// (avalikud üksnes siis, kui õpetaja on ise andnud loa LessonPlan.
+// publishedToGalleryAt kaudu). Kõik siin loetletud read on CC-BY litsentsi
+// alla avaldatud.
+export async function getGalleryItems(): Promise<GalleryItem[]> {
+  const [samples, lessonPlans] = await Promise.all([
+    prisma.sampleLessonPlan.findMany({
+      where: { hidden: false },
+      include: { authorUser: true, parts: true },
+    }),
+    prisma.lessonPlan.findMany({
+      where: { publishedToGalleryAt: { not: null }, researchPlanEntry: { hidden: false } },
+      include: {
+        parts: true,
+        researchPlanEntry: { include: { teacher: { include: { user: true } } } },
+      },
+    }),
+  ]);
+
+  const sampleItems: GalleryItem[] = samples.map((s) => ({
+    id: `naidistund:${s.id}`,
+    sourceType: 'NAIDISTUND',
+    refId: s.id,
+    gradeBand: s.gradeBand,
+    appliedMethods: s.appliedMethods,
+    topic: s.topic,
+    authorName: s.authorUser.name,
+    authorRoleLabel: 'Teadur',
+    durationMin: s.durationMin,
+    partsCount: s.parts.length,
+    publishedAt: s.createdAt,
+  }));
+
+  const lessonPlanItems: GalleryItem[] = lessonPlans.map((lp) => ({
+    id: `katsetund:${lp.id}`,
+    sourceType: 'KATSETUND',
+    refId: lp.id,
+    gradeBand: lp.researchPlanEntry.teacher.gradeBand,
+    appliedMethods: lp.researchPlanEntry.appliedMethods,
+    topic: lp.researchPlanEntry.topic,
+    authorName: lp.researchPlanEntry.teacher.user.name,
+    authorRoleLabel: 'Õpetaja-uurija',
+    durationMin: lp.researchPlanEntry.durationMin,
+    partsCount: lp.parts.length,
+    publishedAt: lp.publishedToGalleryAt as Date,
+  }));
+
+  return [...sampleItems, ...lessonPlanItems];
+}
+
+export async function getGalleryItemByRef(
+  sourceType: GallerySourceType,
+  refId: string,
+): Promise<GalleryItem | null> {
+  const items = await getGalleryItems();
+  return items.find((i) => i.sourceType === sourceType && i.refId === refId) ?? null;
+}
+
+export interface GalleryPart {
+  order: number;
+  title: string;
+  type: string;
+  durationMin: number;
+  description: string | null;
+}
+
+export interface GalleryDetail extends GalleryItem {
+  parts: GalleryPart[];
+  materials: Record<string, string>;
+  homeworkText: string | null;
+  homeworkRelated: boolean;
+}
+
+// Nagu getGalleryItemByRef, aga koos tunniosade/õppevara/kodutöö sisuga —
+// kasutatakse detailvaates ja DOCX genereerimisel. Kontrollib avaldamise
+// tingimusi uuesti (mitte ainult nimekirjavaate põhjal), et otsene URL
+// avaldamata sisu ei lekitaks.
+export async function getGalleryDetail(
+  sourceType: GallerySourceType,
+  refId: string,
+): Promise<GalleryDetail | null> {
+  if (sourceType === 'NAIDISTUND') {
+    const s = await prisma.sampleLessonPlan.findUnique({
+      where: { id: refId },
+      include: { authorUser: true, parts: { orderBy: { order: 'asc' } } },
+    });
+    if (!s || s.hidden) return null;
+    return {
+      id: `naidistund:${s.id}`,
+      sourceType: 'NAIDISTUND',
+      refId: s.id,
+      gradeBand: s.gradeBand,
+      appliedMethods: s.appliedMethods,
+      topic: s.topic,
+      authorName: s.authorUser.name,
+      authorRoleLabel: 'Teadur',
+      durationMin: s.durationMin,
+      partsCount: s.parts.length,
+      publishedAt: s.createdAt,
+      parts: s.parts,
+      materials: s.materialsJson ? JSON.parse(s.materialsJson) : {},
+      homeworkText: s.homeworkText,
+      homeworkRelated: s.homeworkRelated,
+    };
+  }
+
+  const lp = await prisma.lessonPlan.findUnique({
+    where: { id: refId },
+    include: {
+      parts: { orderBy: { order: 'asc' } },
+      researchPlanEntry: { include: { teacher: { include: { user: true } } } },
+    },
+  });
+  if (!lp || !lp.publishedToGalleryAt || lp.researchPlanEntry.hidden) return null;
+  return {
+    id: `katsetund:${lp.id}`,
+    sourceType: 'KATSETUND',
+    refId: lp.id,
+    gradeBand: lp.researchPlanEntry.teacher.gradeBand,
+    appliedMethods: lp.researchPlanEntry.appliedMethods,
+    topic: lp.researchPlanEntry.topic,
+    authorName: lp.researchPlanEntry.teacher.user.name,
+    authorRoleLabel: 'Õpetaja-uurija',
+    durationMin: lp.researchPlanEntry.durationMin,
+    partsCount: lp.parts.length,
+    publishedAt: lp.publishedToGalleryAt,
+    parts: lp.parts,
+    materials: lp.materialsJson ? JSON.parse(lp.materialsJson) : {},
+    homeworkText: lp.homeworkText,
+    homeworkRelated: lp.homeworkRelated,
+  };
+}

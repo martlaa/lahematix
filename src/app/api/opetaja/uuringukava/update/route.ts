@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const id = String(form.get('id') ?? '');
 
-  const entry = await prisma.researchPlanEntry.findUnique({ where: { id } });
+  const entry = await prisma.researchPlanEntry.findUnique({ where: { id }, include: { lessonPlan: true } });
   if (!entry || entry.teacherId !== teacher.id) {
     return NextResponse.json({ error: 'Rida ei leitud' }, { status: 404 });
   }
@@ -50,6 +50,17 @@ export async function POST(req: NextRequest) {
       observerUserId: expectingObserver ? undefined : null,
     },
   });
+
+  if (entry.lessonPlan) {
+    const publishToGallery = form.get(`publishToGallery.${id}`) === 'on';
+    const alreadyPublished = entry.lessonPlan.publishedToGalleryAt !== null;
+    if (publishToGallery !== alreadyPublished) {
+      await prisma.lessonPlan.update({
+        where: { id: entry.lessonPlan.id },
+        data: { publishedToGalleryAt: publishToGallery ? new Date() : null },
+      });
+    }
+  }
 
   return NextResponse.redirect(new URL('/opetaja/uuringukava', req.url), 303);
 }

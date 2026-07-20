@@ -12,5 +12,5 @@ export default async function HomePage() {
   if (session.userId && session.role) {
     redirect(roleRedirect[session.role] ?? '/login');
   }
-  redirect('/login');
+  redirect('/galerii');
 }

@@ -350,6 +350,7 @@ model LessonPlan {
   materialsJson       String? // { slaidid?, toolehed?, ulesanded?, opik?, kahoot?, muu? } — väärtus = link/tekst, võti olemas = linnuke märgitud
   homeworkText        String?
   homeworkRelated     Boolean  @default(false) // kas kodutöö on otseselt seotud tänase tunni teemaga
+  publishedToGalleryAt DateTime? // õpetaja nõusolek avaldada see tunnikava avalikus galeriis (Faas 5), CC-BY
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

@@ -124,6 +124,9 @@ export default async function OpetajaUuringukavaPage() {
                     <th className="py-1 pr-2"></th>
                     <th className="py-1 pr-2 text-center">Uurijapäevik</th>
                     <th className="py-1 pr-2 text-center">Vaatlusprotokoll</th>
+                    <th className="py-1 pr-2 text-center" title="Avalda tunnikava avalikus galeriis (CC-BY)">
+                      Galerii
+                    </th>
                     <th className="py-1"></th>
                   </tr>
                 </thead>
@@ -180,6 +183,9 @@ export default async function OpetajaUuringukavaPage() {
                             ) : (
                               '—'
                             )}
+                          </td>
+                          <td className="py-2 pr-2 text-center">
+                            {e.lessonPlan?.publishedToGalleryAt ? 'Avaldatud' : '—'}
                           </td>
                           <td className="py-2">
                             <button
@@ -311,6 +317,20 @@ export default async function OpetajaUuringukavaPage() {
                           ) : (
                             '—'
                           )}
+                        </td>
+                        <td className="py-2 pr-2 text-center">
+                          <input
+                            type="checkbox"
+                            name={`publishToGallery.${e.id}`}
+                            defaultChecked={Boolean(e.lessonPlan?.publishedToGalleryAt)}
+                            disabled={!e.lessonPlan}
+                            title={
+                              e.lessonPlan
+                                ? 'Avalda see tunnikava avalikus galeriis CC-BY litsentsiga'
+                                : 'Lisa esmalt tunnikava'
+                            }
+                            className="h-4 w-4 rounded border-slate-300 disabled:opacity-30"
+                          />
                         </td>
                         <td className="py-2">
                           <button
