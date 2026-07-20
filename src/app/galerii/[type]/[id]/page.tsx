@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getGalleryDetail, type GallerySourceType } from '@/lib/gallery';
 import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, type MaterialsAnswers } from '@/lib/lessonplan/types';
+import { PublicNav } from '@/components/PublicNav';
 
 const METHOD_LABEL: Record<string, string> = {
   BOALER: 'Boaler',
@@ -29,7 +30,9 @@ export default async function GaleriiDetailPage({ params }: { params: { type: st
   const materials: MaterialsAnswers = detail.materials;
 
   return (
-    <main className="max-w-3xl mx-auto w-full px-4 py-8 space-y-6">
+    <>
+      <PublicNav active="galerii" />
+      <main className="max-w-3xl mx-auto w-full px-4 py-8 space-y-6">
       <a href="/galerii" className="inline-block text-sm text-brand-600 underline hover:no-underline">
         ← Tagasi galerii juurde
       </a>
@@ -125,6 +128,7 @@ export default async function GaleriiDetailPage({ params }: { params: { type: st
           — vabalt kasutatav ja jagatav, tingimusel et autorile ({detail.authorName}) viidatakse.
         </p>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

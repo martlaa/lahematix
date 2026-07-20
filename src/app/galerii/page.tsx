@@ -1,4 +1,5 @@
 import { getGalleryItems, type GalleryItem } from '@/lib/gallery';
+import { PublicNav } from '@/components/PublicNav';
 
 const METHOD_LABEL: Record<string, string> = {
   BOALER: 'Boaler',
@@ -96,13 +97,10 @@ export default async function GaleriiPage({
   }
 
   return (
-    <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">LAHEMATIX tunnikavade galerii</h1>
-        <a href="/login" className="text-sm text-brand-600 underline hover:no-underline">
-          Logi sisse →
-        </a>
-      </div>
+    <>
+      <PublicNav active="galerii" />
+      <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-6">
+      <h1 className="text-2xl font-semibold text-slate-900">Tunnikavade galerii</h1>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <p className="text-sm text-slate-600">
@@ -217,6 +215,7 @@ export default async function GaleriiPage({
           </table>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
