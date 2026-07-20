@@ -1,150 +1,160 @@
-# LAHEMATIX — Faas 1–3 (autentimine, andmekogumine, tunnikavad ja vaatlusprotokoll)
+# LAHEMATIX
 
-See on LAHEMATE projekti uuringurakenduse lähtekood. Valmis on **Faas 1–3**:
-koolide/kasutajate haldus ja kõik neli nõusolekuvormi (Faas 1); õpilase ja õpetaja
-küsimustikud, matemaatilise probleemilahenduse testid koos hindamisega, uurijapäevik
-ja õpetaja isiklik uuringukava (Faas 2); struktureeritud tunnikavad, sellest
-dünaamiliselt genereeritud tunnivaatlusprotokoll, tunnivaatluste broneerimise turg,
-teaduri näidistunnikavad ja instrumentide katsetuskeskkond (Faas 3). Täpne kava ja
-järgmised faasid (andmeeksport, avalik tunnikavade galerii, tootmisvalmidus) on
-dokumendis `LAHEMATIX_arendusnouded_ja_plaan-4.md`.
+LAHEMATIX on LAHEMATE uurimisprojekti veebirakendus matemaatilise probleemilahenduse
+õpetamise sekkumisuuringu andmete kogumiseks: nõusolekud, küsimustikud, testid,
+tunnikavad, tunnivaatlused ja uurijapäevikud ühes kohas — õpilastele, õpetajatele-
+uurijatele, koolijuhtidele, lapsevanematele, teaduritele ja projekti adminile.
 
-**Autentimine (versioon 3):** HarID/MobiilID/SmartID-st loobuti kolleegide soovitusel —
-sisselogimine käib e-posti-põhise ühekordse lingiga (magic link, kehtib 15 min, vt
-`src/app/api/auth/login/route.ts` ja `src/app/api/auth/verify/route.ts`). See on
-rakenduse püsiv, mitte ajutine lahendus.
+Rakendus on ehitatud [Next.js](https://nextjs.org) (App Router), [PostgreSQL](https://www.postgresql.org)
+ja [Prisma](https://www.prisma.io) peale ning töötab ilma kliendipoolse JavaScriptita —
+kõik vormid ja tegevused käivad tavaliste HTML-vormide ja serveripoolsete
+marsruutidena.
 
----
+## Praegune seis
 
-## 1. Kiire start täna (kohalikus arvutis, ilma Dockerita)
+Valmis on Faasid 1–5:
 
-Vajad: [Node.js](https://nodejs.org) (versioon 20+) ja kas [Docker](https://www.docker.com/products/docker-desktop/)
-**või** kohalikult paigaldatud PostgreSQL.
+| Faas | Sisu |
+|---|---|
+| 1 | Autentimine (e-posti-põhine ühekordne link) ning koolide/kasutajate/nõusolekute haldus |
+| 2 | Õpilase ja õpetaja küsimustikud, matemaatilise probleemilahenduse testid (koos hindamisega), uurijapäevik, õpetaja isiklik uuringukava |
+| 3 | Struktureeritud tunnikavad, sellest dünaamiliselt genereeritud tunnivaatlusprotokoll, tunnivaatluste broneerimise turg, teaduri näidistunnikavad ja instrumentide katsetuskeskkond |
+| 4 | Pseudonümiseeritud andmete eksport (CSV/XLSX), ekspordilubade kinnitamine, andmete kustutamisvoog ja rakenduse sulgemisvoog |
+| 5 | Avalik tunnikavade galerii (CC BY 4.0), filtreeritav/sorteeritav, koos DOCX-eksportiga |
+
+Pooleli on Faas 6 — tootmisvalmidus (VPS-ile paigaldamine, päris SMTP, WCAG
+kiirülevaatus). Vt allpool jaotist ["Tootmisse viimine"](#tootmisse-viimine).
+
+## Kasutajarollid
+
+| Roll | Autentimine | Peamised tegevused |
+|---|---|---|
+| Admin | E-post (ühekordne link) | Koolide/kasutajate haldus, ekspordilubade kinnitamine, andmete kustutamine, rakenduse sulgemine |
+| Teadur | E-post (ühekordne link) | Nõusolekute jälgimine, näidistunnikavad, instrumentide katsetamine, andmete eksport, tunnivaatlused |
+| Õpetaja-uurija | E-post (ühekordne link) | Nõusolek, õpilaste nimekiri, uuringukava, tunnikavad, uurijapäevik, küsimustik |
+| Õpilane | Ühekordne token-link, ilma kontota | Nõusolek (15+), test, küsimustik |
+| Lapsevanem | E-post (ühekordne link) | Nõusoleku andmine/tagasivõtmine lapse eest |
+| Koolijuht | Ühekordne token-link, ilma kontota | Kooli nõusolek |
+| Külaline (ilma kontota) | — | Avalik tunnikavade galerii (`/galerii`) |
+
+## Kiire start (kohalik arendus)
+
+Vajad: [Node.js](https://nodejs.org) 20+ ja kas [Docker](https://www.docker.com/products/docker-desktop/)
+või kohalikult paigaldatud PostgreSQL 16.
 
 ```bash
-# 1. Paki lahti ja mine kausta
+git clone git@github.com:martlaa/lahematix.git
 cd lahematix
 
-# 2. Paigalda sõltuvused
 npm install
 
-# 3. Loo .env fail näidise põhjal
 cp .env.example .env
-# Ava .env ja muuda vähemalt SESSION_SECRET (vt fail, seal on juhis).
-# SMTP väljad võid esialgu tühjaks/valeks jätta — kutsete saatmine
-# lihtsalt ebaõnnestub vaikselt (logisse tuleb viga), aga rakendus töötab.
+# Ava .env ja täida vähemalt SESSION_SECRET (vt fail — genereeri nt
+# `openssl rand -base64 32`). SMTP väljad võib esialgu tühjaks jätta:
+# kutsete saatmine ebaõnnestub vaikimisi ainult logisse kirjutades ja
+# sisselogimislingid ilmuvad arenduses konsooli (vt allpool).
 
-# 4a. KUI Sul on Docker: käivita ainult andmebaas
-docker compose up -d db
+docker compose up -d db        # KUI kasutad Dockerit
+# muidu: paigalda PostgreSQL ise ja muuda .env failis DATABASE_URL
 
-# 4b. KUI Sul EI OLE Dockerit: paigalda PostgreSQL kohapeal ja
-#     muuda .env failis DATABASE_URL vastavaks.
+npx prisma migrate deploy
+npm run seed                   # loob admin@lahemate.ee kasutaja
 
-# 5. Loo andmebaasi tabelid
-npx prisma migrate dev --name init
-
-# 6. Loo esimene admin-kasutaja
-npm run seed
-
-# 7. Käivita rakendus
 npm run dev
 ```
 
-Ava brauseris **http://localhost:3000** — see suunab sind `/login` lehele.
-Logi sisse e-postiga `admin@lahemate.ee` (see luuakse seed-skriptiga).
+Ava brauseris **http://localhost:3000** — sisselogimata külastajale kuvatakse
+avalik tunnikavade galerii; sisseloginud kasutaja suunatakse oma rolli töölauale.
 
-### Mida saad täna kohe katsetada
-1. Admin-kontoga (`admin@lahemate.ee`): loo kool, kutsu õpetaja ja koolijuht (kasuta
-   oma pärisemaile, kui tahad ka e-kirja saatmist katsetada — vajab .env SMTP seadeid).
-2. Logi kutsutud õpetaja e-postiga sisse → täida "Minu nõusolek" → lisa õpilasi
-   (proovi nii alla-15 kui 15+ õpilast).
-3. Alla-15 õpilase lisamisel saadetakse lapsevanemale kutse — logi selle e-postiga
-   sisse ja täida lapsevanema nõusolek.
-4. 15+ õpilase jaoks kuvatakse õpilaste nimekirjas otse link — ava see link uues
-   privaatses aknas (ilma sisselogimiseta) ja täida õpilase enda nõusolek.
-5. Koolijuhi e-postiga sisse logides näed kooli nõusolekuvormi.
-6. Kutsu ka teadur ja vaata `/teadur` alt jälgimisvaadet.
+Logi esimesena sisse admin-kontoga (`admin@lahemate.ee`). Kuna SMTP pole veel
+seadistatud, ei jõua sisselogimislink e-posti — see ilmub `npm run dev`
+terminaliaknasse reana `[DEV] Sisselogimislink kasutajale ...`. Kopeeri link
+brauserisse.
 
----
+Admin-kontolt saab luua kooli, kutsuda õpetajaid/teadureid ning jälgida kogu
+uuringu seisu.
 
-## 2. Esmaspäeval/teisipäeval — üleminek VPS-ile
+## Keskkonnamuutujad
 
-### 2.1. VPS-ile (lahemate.ee) paigaldamine
+Vt `.env.example` täieliku loeteluga koos selgitustega. Kokkuvõtvalt:
+
+| Muutuja | Kirjeldus |
+|---|---|
+| `DATABASE_URL` | PostgreSQL ühendusstring |
+| `SESSION_SECRET` | Sessiooni krüpteerimisvõti (iron-session) — vähemalt 32 tähemärki |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | E-posti saatmise seaded (kutsed, sisselogimislingid) |
+| `APP_BASE_URL` | Rakenduse avalik aadress — kasutatakse linkide genereerimisel |
+
+## Projekti struktuur
+
+```
+prisma/schema.prisma        andmemudel (kõik Faas 1–5 mudelid)
+prisma/migrations/          migratsioonid (rakenda: npx prisma migrate deploy)
+prisma/seed.ts              loob esimese admin-kasutaja
+
+src/lib/
+  session.ts                 sessioonihaldus (iron-session)
+  prisma.ts                  andmebaasiühenduse singleton
+  mail.ts                    e-kirjade saatmine (SMTP)
+  pseudonym.ts                õpilaste/õpetajate pseudonüümikoodide genereerimine
+  appSettings.ts               rakenduse sulgemise/avamise olek
+  gallery.ts, galleryDocx.ts    avaliku galerii andmed ja DOCX-genereerimine
+  export/                      teaduri andmeekspordi CSV/XLSX loogika
+  questionnaires/, tests/, journal/, lessonplan/, observation/
+                                — küsimustike/testide/päeviku/tunnikavade/
+                                  vaatlusprotokolli sisu (hardcoded, Lisa 4–11)
+
+src/components/               jagatud UI-komponendid (vormirenderdajad jm)
+
+src/app/
+  admin/                      koolide/kasutajate haldus, ekspordilubade
+                              kinnitamine, andmete kustutamine, sulgemisvoog
+  teadur/                     jälgimisvaade, näidistunnikavad, instrumentide
+                              katsetuskeskkond, andmete eksport
+  opetaja/                    töölaud, nõusolek, õpilaste nimekiri (Lisa 2/CSV),
+                              uuringukava (Lisa 10), tunnikava (Lisa 11),
+                              päevik (Lisa 7), küsimustik (Lisa 8)
+  koolijuht/, lapsevanem/, opilane/
+                              token-põhised (enamik ilma kontota) vaated
+  vaatlused/                  tunnivaatluste broneerimise turg + protokoll
+  galerii/                    avalik tunnikavade galerii (ilma kontota)
+  api/                        kõik vastavad API-marsruudid
+```
+
+## Tootmisse viimine
+
+Rakendus on konteineritud (`Dockerfile`, `docker-compose.yml`):
+
 ```bash
-# VPS-is (SSH kaudu):
-git clone <sinu-repo-url> lahematix   # või laadi failid muul moel üles
+# Serveris:
+git clone git@github.com:martlaa/lahematix.git
 cd lahematix
 cp .env.example .env
-# Täida .env päris SMTP ja SESSION_SECRET väärtustega
+# täida .env päris SESSION_SECRET, SMTP ja APP_BASE_URL väärtustega
 
 docker compose up -d --build
 docker compose exec app npx prisma migrate deploy
 docker compose exec app npm run seed
 ```
-Selle järel jookseb rakendus pordil 3000 — vajad veel Nginx reverse proxy't ja
-Let's Encrypt SSL-sertifikaati domeeni jaoks (nt `lahematix.lahemate.ee`). Sellega
-saan Sind aidata järgmises Claude Code sessioonis, kui VPS ligipääs on olemas.
 
-Autentimine (e-posti-põhine magic link) on juba püsiv lahendus — HarID-integratsiooni
-enam ei plaanita (vt `LAHEMATIX_arendusnouded_ja_plaan-4.md`).
+Rakendus jookseb seejärel pordil 3000. Tootmises on lisaks vaja:
 
----
+- **Reverse proxy + SSL** — nt Nginx koos Let's Encrypt sertifikaadiga domeeni jaoks.
+- **Päris SMTP seaded** — ilma nendeta ei jõua sisselogimislingid ega kutsed kasutajateni.
+- **Andmebaasi varundus** — `db_data` Docker-köite regulaarne backup.
 
-## 3. Projekti struktuur
+## Tõrkeotsing
 
-```
-prisma/schema.prisma       — andmemudel: Faas 1 (User, School, Teacher, Student,
-                              ConsentRecord, InviteToken, AuditLog) + Faas 2
-                              (QuestionnaireResponse, TestSubmission/Photo/Grading,
-                              JournalEntry, ResearchPlanEntry) + Faas 3 (LessonPlan/
-                              Part, LessonPlanComment, ObservationProtocol,
-                              SampleLessonPlan/Part, InstrumentTrial)
-prisma/seed.ts              — loob esimese admin-kasutaja
-src/lib/session.ts          — sessioonihaldus (iron-session)
-src/app/api/auth/login/     — magic-link väljastamine (e-posti saatmine)
-src/app/api/auth/verify/    — magic-link kontroll ja sessiooni loomine
-src/lib/prisma.ts           — andmebaasiühenduse singleton
-src/lib/mail.ts             — e-kirjade saatmine (zone.ee SMTP)
-src/lib/pseudonym.ts        — õpilaste pseudonüümikoodide genereerimine
-src/lib/questionnaires/     — Lisa 4 (eel/järel) ja Lisa 8 sisu (hardcoded)
-src/lib/tests/              — matemaatilise probleemilahenduse testid (3 vanuseastet)
-src/lib/journal/            — Lisa 7 (uurijapäeviku) sisu
-src/lib/lessonplan/         — tunniosa tüübid, õppevara valikud (Lisa 11)
-src/lib/observation/        — Lisa 6 (vaatlusprotokolli) tunnused/domeenid
-src/components/             — jagatud UI komponendid (sh QuestionnaireForm, TestForm,
-                              JournalForm — taaskasutatavad ka teaduri instrumentide
-                              katsetuskeskkonnas)
-src/app/
-  admin/                    — koolide/kasutajate haldus
-  teadur/                   — jälgimisvaade, näidistunnikavad, instrumentide
-                              katsetuskeskkond
-  koolijuht/nousolek/       — Lisa 1
-  opetaja/                  — töölaud, nousolek/ (Lisa 2), opilased/ (nimekiri, CSV
-                              import), uuringukava/ (Lisa 10), tunnikava/ (Lisa 11),
-                              paevik/ (Lisa 7), kysimustik/ (Lisa 8), vaatlusprotokoll/
-  lapsevanem/                — töölaud, nousolek/[studentId]/ (Lisa 3)
-  opilane/nousolek/[token]/  — Lisa 3b, kysimustik/[token]/, test/[token]/ — kõik
-                              ilma sisselogimiseta (token-URL)
-  vaatlused/                 — tunnivaatluste broneerimise turg + protokolli täitmine
-  api/                       — kõik vastavad API route'id
-```
-
-## 4. Mis on veel PUUDU (Faas 4+, ei ole selles versioonis)
-- Andmeeksport (pseudonümiseeritud CSV/Excel iga instrumendi kohta) ja andmete
-  elutsükli haldus (tegelik kustutamine pärast nõusoleku tagasivõtmist)
-- Näidistunnikavade avalik galerii/repositoorium (praegu nähtavad ainult sobiva
-  vanuseastme/teema/meetodiga õpetajatele)
-- Tootmisvalmidus: VPS-ile üleminek, päris SMTP seadistus, WCAG kiirülevaatus
-
-Need on kirjeldatud dokumendis `LAHEMATIX_arendusnouded_ja_plaan-4.md` (Faasid 4–6).
-Faasid 1–3 (autentimine, andmekogumine, tunnikavad/vaatlusprotokoll/teaduri
-tööriistad) on valmis.
-
-## 5. Kui midagi ei tööta
-Kõige tõenäolisemad probleemid:
 - **"Can't reach database"** — kontrolli, et `docker compose up -d db` jookseb ja
-  `.env` failis DATABASE_URL klapib docker-compose.yml seadetega.
-- **E-kirjad ei saadeta** — kontrolli SMTP andmeid `.env` failis; rakendus töötab
-  ka ilma (viga läheb ainult serveri logisse).
+  `.env` failis `DATABASE_URL` klapib `docker-compose.yml` seadetega.
+- **E-kirju ei saadeta** — kontrolli SMTP andmeid `.env` failis. Kohalikus
+  arenduses töötab rakendus ka ilma — sisselogimislingid/kutsed ilmuvad
+  serveri logisse (`[DEV] ...`), viga ise ei takista kasutamist.
 - **"SESSION_SECRET is not defined"** — kontrolli, et `.env` fail on olemas
-  (mitte ainult `.env.example`) ja SESSION_SECRET on täidetud.
+  (mitte ainult `.env.example`) ja `SESSION_SECRET` on täidetud.
+
+## Litsents
+
+Lähtekood on avaldatud MIT litsentsi all (vt `LICENSE`). Avalikus tunnikavade
+galeriis (`/galerii`) avaldatud tunnikavade sisu käib eraldi CC BY 4.0
+litsentsi all — vt iga tunnikava detailvaadet.
