@@ -98,6 +98,30 @@ ddev restart                          # reload after dependency/config changes
 ddev logs -s web -f                   # tail the app log
 ```
 
+## Testing
+
+There is a smoke-test suite (Playwright, API-testing mode — the app has no
+client-side JS, so tests drive it via plain HTTP requests, no browser needed)
+covering the critical user journeys: login (magic link), giving/withdrawing
+consent, filling in a questionnaire and a test, and the gated data-export
+approval flow.
+
+```bash
+ddev exec npm run test:e2e
+```
+
+The tests connect directly to the DDEV database (same `DATABASE_URL` the app
+uses) to fetch the tokens a real user would receive by email, and to assert on
+what got written. They refuse to run unless `DATABASE_URL`/`APP_BASE_URL` look
+like the local DDEV environment (see `tests/e2e/support/global-setup.ts`) —
+**never point this suite at production**. Each run creates its own
+uniquely-named fixtures (school, teacher, student) and cleans them up
+afterwards, so it's safe to run repeatedly against the same dev database.
+
+Test files live in `tests/e2e/`; this is a starting smoke-test set for the
+riskiest paths, not full coverage (see the development plan, Faas 7, for what's
+still missing — broader coverage, CI wiring, etc.).
+
 ## Environment variables
 
 See `.env.example` for the full list. In short:

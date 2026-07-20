@@ -7,3 +7,5 @@ dev.db
 .claude/settings.local.json
 tsconfig.tsbuildinfo
 uploads/
+test-results/
+playwright-report/

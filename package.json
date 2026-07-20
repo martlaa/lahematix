@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
-    "admin:create": "tsx prisma/createAdmin.ts"
+    "admin:create": "tsx prisma/createAdmin.ts",
+    "test:e2e": "node --env-file=.env node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
@@ -26,6 +27,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.1.1",
     "@types/nodemailer": "8.0.1",
