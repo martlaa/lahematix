@@ -17,8 +17,9 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# Prisma's query engine needs OpenSSL at runtime too
-RUN apk add --no-cache openssl libc6-compat
+# openssl/libc6-compat: Prisma's query engine needs them at runtime.
+# tzdata: so TZ=Europe/Tallinn resolves to real EET/EEST times instead of UTC.
+RUN apk add --no-cache openssl libc6-compat tzdata
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

@@ -43,6 +43,7 @@ services:
     environment:
       HOSTNAME: 0.0.0.0 # make the standalone server listen on all interfaces
       PORT: '3000'
+      TZ: Europe/Tallinn # render server-side dates in Estonian local time (EET/EEST), not UTC
     depends_on:
       db:
         condition: service_healthy
