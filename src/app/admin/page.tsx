@@ -38,6 +38,8 @@ export default async function AdminPage({
 
   const users = usersRaw.map((u) => ({ ...u, lastLogin: lastLoginByUserId.get(u.id) ?? null }));
 
+  const pendingExportRequests = await prisma.exportRequest.count({ where: { status: 'PENDING' } });
+
   const validSortFields: UserSortField[] = ['name', 'email', 'role', 'status', 'lastLogin'];
   const sortField: UserSortField = validSortFields.includes(searchParams.sort as UserSortField)
     ? (searchParams.sort as UserSortField)
@@ -75,6 +77,14 @@ export default async function AdminPage({
     <>
       <Header userLabel={`${session.name} (admin)`} />
       <main className="max-w-4xl mx-auto w-full px-4 py-8 space-y-8">
+        {pendingExportRequests > 0 && (
+          <Alert kind="info">
+            <a href="/admin/eksporditaotlused" className="underline hover:no-underline font-medium">
+              {pendingExportRequests} ekspordiluba ootab sinu otsust →
+            </a>
+          </Alert>
+        )}
+
         {imported !== null && (
           <Alert kind={importErrors.length > 0 ? 'info' : 'success'}>
             <p>{imported} õpilast lisati edukalt CSV-failist.</p>
@@ -92,6 +102,42 @@ export default async function AdminPage({
             )}
           </Alert>
         )}
+
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-900">Andmeekspordi taotlused</h2>
+            <p className="text-sm text-slate-600 mt-1">
+              Küsimustike, testitulemuste ja uurijapäeviku ekspordilubade kinnitamine.
+            </p>
+          </div>
+          <a href="/admin/eksporditaotlused" className="text-sm text-brand-600 underline hover:no-underline whitespace-nowrap">
+            Ava taotlused →
+          </a>
+        </section>
+
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-900">Andmete kustutamine</h2>
+            <p className="text-sm text-slate-600 mt-1">
+              Nõusoleku tagasi võtnud õpilaste/õpetajate identifitseerivate andmete jäädav kustutamine.
+            </p>
+          </div>
+          <a href="/admin/andmekustutus" className="text-sm text-brand-600 underline hover:no-underline whitespace-nowrap">
+            Ava →
+          </a>
+        </section>
+
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-900">Rakenduse sulgemine</h2>
+            <p className="text-sm text-slate-600 mt-1">
+              Uuringu lõppedes rakenduse sulgemine — valmisoleku ülevaade ja sulgemis-/taasavamistoiming.
+            </p>
+          </div>
+          <a href="/admin/sulgemine" className="text-sm text-brand-600 underline hover:no-underline whitespace-nowrap">
+            Ava →
+          </a>
+        </section>
 
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Uus kool</h2>

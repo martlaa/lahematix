@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { isAppClosed } from '@/lib/appSettings';
 
 // Lapsevanem (versioon 4) ja koolijuht (versioon 5) ei kasuta seda voogu — vt
 // /lapsevanem/nousolek/[token] ja /koolijuht/nousolek/[token].
@@ -41,6 +42,10 @@ export async function GET(req: NextRequest) {
     // Vanad KOOLIJUHT/LAPSEVANEM kasutajad (enne versiooni 4/5) ei tohi enam sisse logida.
     return NextResponse.redirect(new URL('/login?error=invalid_token', req.url));
   }
+  if (user.role !== 'ADMIN' && (await isAppClosed())) {
+    return NextResponse.redirect(new URL('/login?error=app_closed', req.url));
+  }
+
   if (user.status === 'INVITED') {
     await prisma.user.update({ where: { id: user.id }, data: { status: 'ACTIVE' } });
   }

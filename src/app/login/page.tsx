@@ -15,6 +15,7 @@ export default function LoginPage() {
 function LoginForm() {
   const searchParams = useSearchParams();
   const tokenError = searchParams.get('error') === 'invalid_token';
+  const appClosedError = searchParams.get('error') === 'app_closed';
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,12 @@ function LoginForm() {
       {tokenError && (
         <Alert kind="error">
           Link on aegunud, juba kasutatud või vale. Palun sisesta oma e-post uuesti, et saada uus link.
+        </Alert>
+      )}
+      {appClosedError && (
+        <Alert kind="error">
+          LAHEMATIX rakendus on suletud — uuring on lõppenud. Küsimuste korral võta ühendust projekti
+          meeskonnaga.
         </Alert>
       )}
       {error && <Alert kind="error">{error}</Alert>}

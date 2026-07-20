@@ -1,15 +1,31 @@
 import { getSession } from '@/lib/session';
+import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert } from '@/components/ui';
 import { DATASET_DEFINITIONS } from '@/lib/export/datasets';
+import { isGatedDataset } from '@/lib/export/types';
 
 export default async function TeadurEksportPage() {
   const session = await getSession();
   if (!session.userId || session.role !== 'TEADUR') redirect('/login');
 
+  const myRequests = await prisma.exportRequest.findMany({
+    where: { requestedByUserId: session.userId },
+    orderBy: { requestedAt: 'desc' },
+  });
+  const latestRequestByDataset = new Map<string, (typeof myRequests)[number]>();
+  for (const r of myRequests) {
+    if (!latestRequestByDataset.has(r.datasetKey)) latestRequestByDataset.set(r.datasetKey, r);
+  }
+
   const datasets = await Promise.all(
-    DATASET_DEFINITIONS.map(async (d) => ({ ...d, rowCount: (await d.build()).rows.length })),
+    DATASET_DEFINITIONS.map(async (d) => ({
+      ...d,
+      rowCount: (await d.build()).rows.length,
+      gated: isGatedDataset(d.key),
+      request: latestRequestByDataset.get(d.key) ?? null,
+    })),
   );
 
   return (
@@ -27,6 +43,10 @@ export default async function TeadurEksportPage() {
             ega lapsevanemate nimesid ega kontaktandmeid, ainult uurimisandmestiku pseudonüümikoode (vt
             eetikataotlus p 4.1–4.2). Teaduri enda instrumendikatsetused ja näidistunnikavad ei ole päris
             uurimisandmestik, seetõttu neid siit ei ekspordita.
+          </p>
+          <p className="text-sm text-slate-600 mt-2">
+            Küsimustike, testitulemuste ja uurijapäeviku andmed sisaldavad hoiaku-/õpitulemuste andmeid —
+            nende allalaadimine vajab iga kord admini kinnitust (vt allpool "Taotle ekspordiluba").
           </p>
         </div>
 
@@ -53,18 +73,64 @@ export default async function TeadurEksportPage() {
                   <td className="py-3 pr-2 text-slate-600">{d.description}</td>
                   <td className="py-3 pr-2 text-right text-slate-700">{d.rowCount}</td>
                   <td className="py-3 pr-2 whitespace-nowrap">
-                    <a
-                      href={`/api/teadur/eksport/${d.key}?format=csv`}
-                      className="text-brand-600 underline hover:no-underline mr-3"
-                    >
-                      CSV
-                    </a>
-                    <a
-                      href={`/api/teadur/eksport/${d.key}?format=xlsx`}
-                      className="text-brand-600 underline hover:no-underline"
-                    >
-                      XLSX
-                    </a>
+                    {!d.gated && (
+                      <>
+                        <a
+                          href={`/api/teadur/eksport/${d.key}?format=csv`}
+                          className="text-brand-600 underline hover:no-underline mr-3"
+                        >
+                          CSV
+                        </a>
+                        <a
+                          href={`/api/teadur/eksport/${d.key}?format=xlsx`}
+                          className="text-brand-600 underline hover:no-underline"
+                        >
+                          XLSX
+                        </a>
+                      </>
+                    )}
+                    {d.gated && d.request?.status === 'PENDING' && (
+                      <span className="text-xs text-yellow-700 bg-yellow-100 rounded-full px-2 py-0.5">
+                        Ootab admini kinnitust
+                      </span>
+                    )}
+                    {d.gated && d.request?.status === 'APPROVED' && (
+                      <div className="space-y-1">
+                        <div>
+                          <a
+                            href={`/api/teadur/eksport/${d.key}?format=csv`}
+                            className="text-brand-600 underline hover:no-underline mr-3"
+                          >
+                            CSV
+                          </a>
+                          <a
+                            href={`/api/teadur/eksport/${d.key}?format=xlsx`}
+                            className="text-brand-600 underline hover:no-underline"
+                          >
+                            XLSX
+                          </a>
+                        </div>
+                        <p className="text-xs text-slate-400">Luba kehtib ühekordseks allalaadimiseks.</p>
+                      </div>
+                    )}
+                    {d.gated && (!d.request || d.request.status === 'DENIED' || d.request.status === 'FULFILLED') && (
+                      <div className="space-y-1">
+                        {d.request?.status === 'DENIED' && (
+                          <p className="text-xs text-red-600">
+                            Eelmine taotlus lükati tagasi{d.request.decisionNote ? `: ${d.request.decisionNote}` : '.'}
+                          </p>
+                        )}
+                        {d.request?.status === 'FULFILLED' && (
+                          <p className="text-xs text-slate-400">Eelmine luba on ära kasutatud.</p>
+                        )}
+                        <form action="/api/teadur/eksport/taotle" method="post">
+                          <input type="hidden" name="datasetKey" value={d.key} />
+                          <button className="text-xs text-brand-600 underline hover:no-underline">
+                            Taotle ekspordiluba
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

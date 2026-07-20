@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { prisma } from '@/lib/prisma';
 import { sendMail, magicLinkEmailHtml } from '@/lib/mail';
+import { isAppClosed } from '@/lib/appSettings';
 
 // E-posti-põhine autentimine, versioon 3 (magic link — vt
 // LAHEMATIX_arendusnouded_ja_plaan.md punkt 4). Kasutaja sisestab e-posti,
@@ -24,6 +25,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: 'Sellise e-postiga kasutajat ei leitud. Palun kontrolli aadressi või võta ühendust projekti meeskonnaga.' },
       { status: 401 },
+    );
+  }
+
+  if (user.role !== 'ADMIN' && (await isAppClosed())) {
+    return NextResponse.json(
+      { error: 'LAHEMATIX rakendus on suletud — uuring on lõppenud. Küsimuste korral võta ühendust projekti meeskonnaga.' },
+      { status: 403 },
     );
   }
 
