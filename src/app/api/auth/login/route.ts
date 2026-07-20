@@ -47,7 +47,11 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const link = `${process.env.APP_BASE_URL}/api/auth/verify?token=${token}`;
+  // Viitab kinnituslehele (mitte otse /api/auth/verify-le) — leht ise ei tarbi
+  // tokenit, vaid nõuab veel "Kinnita sisselogimine" klõpsu (vt /login/kinnita).
+  // See kaitseb e-posti turvasüsteemide (nt "Safe Links") automaatse
+  // lingiavamise eest, mis muidu tarbiks tokeni enne päris kasutaja klõpsu.
+  const link = `${process.env.APP_BASE_URL}/login/kinnita?token=${token}`;
 
   if (process.env.NODE_ENV !== 'production') {
     // Kohalikus arenduses, kui SMTP pole seadistatud, saab lingi siit konsoolist kopeerida.

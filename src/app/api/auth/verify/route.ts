@@ -18,10 +18,19 @@ function isAccountRole(role: string): role is AccountRole {
   return (ACCOUNT_ROLES as readonly string[]).includes(role);
 }
 
-export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get('token');
+// Sisselogimislingi tarbimine käib teadlikult POST-ina, mitte GET-ina.
+// Mõnede kasutajate (nt ülikoolide) e-posti turvasüsteemid avavad kirjas
+// olevaid linke automaatselt GET-päringuga, et neid pahavara suhtes
+// kontrollida ("Safe Links" jms) — kui see GET juba tarbiks tokeni, näeks
+// päris kasutaja alati "aegunud" viga, olenemata sellest, kui värske link oli.
+// Seega on link e-kirjas nüüd tavaline leht (/login/kinnita?token=...), mis
+// ise tokenit ei tarbi, ja alles sealne "Kinnita sisselogimine" nupp (POST)
+// jõuab siia.
+export async function POST(req: NextRequest) {
+  const form = await req.formData();
+  const token = String(form.get('token') ?? '');
   if (!token) {
-    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url), 303);
   }
 
   const loginToken = await prisma.loginToken.findUnique({ where: { token }, include: { user: true } });
@@ -32,7 +41,7 @@ export async function GET(req: NextRequest) {
     loginToken.expiresAt < new Date() ||
     loginToken.user.status === 'DISABLED'
   ) {
-    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url), 303);
   }
 
   await prisma.loginToken.update({ where: { id: loginToken.id }, data: { usedAt: new Date() } });
@@ -40,10 +49,10 @@ export async function GET(req: NextRequest) {
   const user = loginToken.user;
   if (!isAccountRole(user.role)) {
     // Vanad KOOLIJUHT/LAPSEVANEM kasutajad (enne versiooni 4/5) ei tohi enam sisse logida.
-    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url));
+    return NextResponse.redirect(new URL('/login?error=invalid_token', process.env.APP_BASE_URL || req.url), 303);
   }
   if (user.role !== 'ADMIN' && (await isAppClosed())) {
-    return NextResponse.redirect(new URL('/login?error=app_closed', process.env.APP_BASE_URL || req.url));
+    return NextResponse.redirect(new URL('/login?error=app_closed', process.env.APP_BASE_URL || req.url), 303);
   }
 
   if (user.status === 'INVITED') {
@@ -57,5 +66,5 @@ export async function GET(req: NextRequest) {
   session.name = user.name;
   await session.save();
 
-  return NextResponse.redirect(new URL(roleRedirect[user.role] ?? '/', process.env.APP_BASE_URL || req.url));
+  return NextResponse.redirect(new URL(roleRedirect[user.role] ?? '/', process.env.APP_BASE_URL || req.url), 303);
 }
