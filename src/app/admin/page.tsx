@@ -4,10 +4,12 @@ import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert, StatusDot, StatusLegend, questionnaireStatus } from '@/components/ui';
 
+type UserSortField = 'name' | 'email' | 'role' | 'status' | 'lastLogin';
+
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: { imported?: string; errors?: string };
+  searchParams: { imported?: string; errors?: string; sort?: string; dir?: string };
 }) {
   const session = await getSession();
   if (!session.userId || session.role !== 'ADMIN') redirect('/login');
@@ -22,7 +24,45 @@ export default async function AdminPage({
     },
     orderBy: { name: 'asc' },
   });
-  const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+  const usersRaw = await prisma.user.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+
+  const lastLoginByUserId = new Map(
+    (
+      await prisma.loginToken.groupBy({
+        by: ['userId'],
+        where: { usedAt: { not: null } },
+        _max: { usedAt: true },
+      })
+    ).map((r) => [r.userId, r._max.usedAt as Date]),
+  );
+
+  const users = usersRaw.map((u) => ({ ...u, lastLogin: lastLoginByUserId.get(u.id) ?? null }));
+
+  const validSortFields: UserSortField[] = ['name', 'email', 'role', 'status', 'lastLogin'];
+  const sortField: UserSortField = validSortFields.includes(searchParams.sort as UserSortField)
+    ? (searchParams.sort as UserSortField)
+    : 'name';
+  const sortDir: 'asc' | 'desc' = searchParams.dir === 'desc' ? 'desc' : 'asc';
+
+  users.sort((a, b) => {
+    let cmp: number;
+    if (sortField === 'lastLogin') {
+      cmp = (a.lastLogin?.getTime() ?? 0) - (b.lastLogin?.getTime() ?? 0);
+    } else {
+      cmp = String(a[sortField]).localeCompare(String(b[sortField]), 'et');
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  function sortLink(field: UserSortField): string {
+    const nextDir = sortField === field && sortDir === 'asc' ? 'desc' : 'asc';
+    return `/admin?sort=${field}&dir=${nextDir}#kasutajad`;
+  }
+
+  function sortIndicator(field: UserSortField): string {
+    if (sortField !== field) return '';
+    return sortDir === 'asc' ? ' ▲' : ' ▼';
+  }
 
   const teacherOptions = schools.flatMap((s) => s.teachers.map((t) => ({ id: t.id, label: `${t.user.name} (${s.name})` })));
 
@@ -251,15 +291,36 @@ export default async function AdminPage({
           {schools.some((s) => s.teachers.length > 0) && <StatusLegend />}
         </section>
 
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <section id="kasutajad" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4">Kõik kasutajad (viimased 50)</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-200">
-                <th className="py-1">Nimi</th>
-                <th className="py-1">E-post</th>
-                <th className="py-1">Roll</th>
-                <th className="py-1">Staatus</th>
+                <th className="py-1">
+                  <a href={sortLink('name')} className="hover:text-slate-800 hover:underline">
+                    Nimi{sortIndicator('name')}
+                  </a>
+                </th>
+                <th className="py-1">
+                  <a href={sortLink('email')} className="hover:text-slate-800 hover:underline">
+                    E-post{sortIndicator('email')}
+                  </a>
+                </th>
+                <th className="py-1">
+                  <a href={sortLink('role')} className="hover:text-slate-800 hover:underline">
+                    Roll{sortIndicator('role')}
+                  </a>
+                </th>
+                <th className="py-1">
+                  <a href={sortLink('status')} className="hover:text-slate-800 hover:underline">
+                    Staatus{sortIndicator('status')}
+                  </a>
+                </th>
+                <th className="py-1">
+                  <a href={sortLink('lastLogin')} className="hover:text-slate-800 hover:underline">
+                    Viimati{sortIndicator('lastLogin')}
+                  </a>
+                </th>
                 <th className="py-1"></th>
               </tr>
             </thead>
@@ -272,6 +333,7 @@ export default async function AdminPage({
                     <td className="py-1">{u.email}</td>
                     <td className="py-1">{u.role}</td>
                     <td className="py-1">{u.status}</td>
+                    <td className="py-1">{u.lastLogin ? u.lastLogin.toLocaleString('et-EE') : '—'}</td>
                     <td className="py-1 text-right">
                       {removable && u.status !== 'DISABLED' && (
                         <form action="/api/admin/users/remove" method="post">
