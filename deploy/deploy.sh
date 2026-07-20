@@ -19,7 +19,10 @@ echo "==> Starting database"
 $COMPOSE up -d db
 
 echo "==> Applying database migrations"
-$COMPOSE run --rm migrate
+# --build so the one-shot migrate image is rebuilt from the current commit;
+# it's in a compose profile, so `docker compose build` above skips it and a
+# stale image would miss newly added migrations.
+$COMPOSE run --build --rm migrate
 
 echo "==> Starting app + reverse proxy"
 $COMPOSE up -d app caddy
