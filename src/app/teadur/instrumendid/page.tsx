@@ -119,7 +119,7 @@ export default async function TeadurInstrumendidPage() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-2">Tunnivaatlusprotokoll</h2>
           <p className="text-sm text-slate-600 mb-3">
-            Checkpointid tulevad dünaamiliselt tunnikava osadest — vali katsetamiseks üks oma
+            Tunniosad tulevad dünaamiliselt tunnikava osadest — vali katsetamiseks üks oma
             näidistunnikavadest ({sampleLessonPlanCount} olemas, {protocolTrialCount} katsetatud).
           </p>
           <a

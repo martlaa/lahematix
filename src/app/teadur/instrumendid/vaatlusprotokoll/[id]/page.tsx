@@ -79,7 +79,7 @@ export default async function TeadurVaatlusprotokollKatsetusPage(props: { params
               return (
                 <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
                   <h2 className="font-semibold text-slate-900 mb-1">
-                    Checkpoint {idx + 1}: {p.title}
+                    Tunniosa {idx + 1}: {p.title}
                   </h2>
                   <p className="text-xs text-slate-500 mb-4">
                     {LESSON_PART_TYPE_LABEL[p.type]} · {p.durationMin} min
