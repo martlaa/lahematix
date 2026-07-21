@@ -106,7 +106,7 @@ export default async function OpetajaUuringukavaPage() {
           {entries.length === 0 ? (
             <p className="text-sm text-slate-500">Ridu pole veel lisatud.</p>
           ) : (
-            <form>
+            <form method="post">
               <table className="w-full text-xs min-w-[860px]">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-200">

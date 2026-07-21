@@ -77,7 +77,7 @@ export default async function TeadurNaidistunnikavadPage() {
           {plans.length === 0 ? (
             <p className="text-sm text-slate-500">Näidistunde pole veel lisatud.</p>
           ) : (
-            <form>
+            <form method="post">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-200">
