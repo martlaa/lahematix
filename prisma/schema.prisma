@@ -354,6 +354,13 @@ model LessonPlan {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  // Tunnikavade jada (õpetaja märgib, et see tund jätkab eelmist) — @unique
+  // previousLessonPlanId peal tagab, et igal tunnil on ülimalt üks "järgmine"
+  // tund, nii jääb jada haruteta lihtsaks lingitud nimekirjaks.
+  previousLessonPlanId String?     @unique
+  previousLessonPlan   LessonPlan? @relation("LessonPlanSequence", fields: [previousLessonPlanId], references: [id], onDelete: SetNull)
+  nextLessonPlan       LessonPlan? @relation("LessonPlanSequence")
+
   parts                LessonPlanPart[]
   comments             LessonPlanComment[]
   observationProtocols ObservationProtocol[]

@@ -40,11 +40,23 @@ export default async function OpetajaTunnikavaPage(
         include: {
           parts: { orderBy: { order: 'asc' } },
           comments: { include: { authorUser: true }, orderBy: { createdAt: 'asc' } },
+          previousLessonPlan: { include: { researchPlanEntry: true } },
+          nextLessonPlan: { include: { researchPlanEntry: true } },
         },
       },
     },
   });
   if (!planEntry || planEntry.teacherId !== teacher!.id) notFound();
+
+  // Kandidaadid "eelmine tund" valikusse: kõik teised sama õpetaja tunnikavad,
+  // uuemad enne (kuupäeva järgi), et hõlpsam oleks värskeim eelnev tund leida.
+  const otherLessonPlans = await prisma.lessonPlan.findMany({
+    where: {
+      researchPlanEntry: { teacherId: teacher!.id, id: { not: planEntry!.id } },
+    },
+    include: { researchPlanEntry: true },
+    orderBy: { researchPlanEntry: { date: 'desc' } },
+  });
 
   const parts = planEntry!.lessonPlan?.parts ?? [];
   const durationSum = parts.reduce((sum, p) => sum + p.durationMin, 0);
@@ -89,6 +101,68 @@ export default async function OpetajaTunnikavaPage(
             Meetod: {teacher!.method ? METHOD_LABEL[teacher!.method] : '—'} <br />
             Tunni teema: {planEntry!.topic ?? '—'}
           </p>
+        </div>
+
+        {(planEntry!.lessonPlan?.previousLessonPlan || planEntry!.lessonPlan?.nextLessonPlan) && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-2 text-sm">
+            {planEntry!.lessonPlan?.previousLessonPlan ? (
+              <a
+                href={`/opetaja/tunnikava/${planEntry!.lessonPlan.previousLessonPlan.researchPlanEntryId}`}
+                className="text-brand-600 underline hover:no-underline"
+              >
+                ← Eelmine tund ({planEntry!.lessonPlan.previousLessonPlan.researchPlanEntry.date.toLocaleDateString('et-EE')}
+                {planEntry!.lessonPlan.previousLessonPlan.researchPlanEntry.topic
+                  ? `, ${planEntry!.lessonPlan.previousLessonPlan.researchPlanEntry.topic}`
+                  : ''}
+                )
+              </a>
+            ) : (
+              <span />
+            )}
+            {planEntry!.lessonPlan?.nextLessonPlan && (
+              <a
+                href={`/opetaja/tunnikava/${planEntry!.lessonPlan.nextLessonPlan.researchPlanEntryId}`}
+                className="text-brand-600 underline hover:no-underline"
+              >
+                Järgmine tund ({planEntry!.lessonPlan.nextLessonPlan.researchPlanEntry.date.toLocaleDateString('et-EE')}
+                {planEntry!.lessonPlan.nextLessonPlan.researchPlanEntry.topic
+                  ? `, ${planEntry!.lessonPlan.nextLessonPlan.researchPlanEntry.topic}`
+                  : ''}
+                ) →
+              </a>
+            )}
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h2 className="font-semibold text-slate-900 mb-2">Seotud tunnikavad</h2>
+          <p className="text-sm text-slate-600 mb-3">
+            Kui see tund jätkab otseselt mõnd varasemat tundi, märgi see siin — nii saavad tunnikava
+            vaatajad (nt vaatlejaks märkinud teadur) hõlpsasti eelmise ja järgmise tunni vahel liikuda.
+          </p>
+          {otherLessonPlans.length === 0 ? (
+            <p className="text-sm text-slate-500">Ühtegi teist enda tunnikava pole veel lisatud.</p>
+          ) : (
+            <form action="/api/opetaja/tunnikava/eelmine" method="post" className="flex flex-wrap items-center gap-3">
+              <input type="hidden" name="planEntryId" value={planEntry!.id} />
+              <select
+                name="previousLessonPlanId"
+                defaultValue={planEntry!.lessonPlan?.previousLessonPlanId ?? ''}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">— pole eelmist tundi / esimene tund —</option>
+                {otherLessonPlans.map((lp) => (
+                  <option key={lp.id} value={lp.id}>
+                    {lp.researchPlanEntry.date.toLocaleDateString('et-EE')}
+                    {lp.researchPlanEntry.topic ? ` — ${lp.researchPlanEntry.topic}` : ''}
+                  </option>
+                ))}
+              </select>
+              <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                Salvesta
+              </button>
+            </form>
+          )}
         </div>
 
         {matchingSamples.length > 0 && (
@@ -164,7 +238,35 @@ export default async function OpetajaTunnikavaPage(
                 <tbody>
                   {parts.map((p) => (
                     <tr key={p.id} className="border-b border-slate-100 align-top">
-                      <td className="py-2 pr-2">{p.order}</td>
+                      <td className="py-2 pr-2">
+                        <div className="flex items-center gap-1">
+                          <span>{p.order}</span>
+                          <span className="flex flex-col leading-none">
+                            <button
+                              type="submit"
+                              name="id"
+                              value={p.id}
+                              formAction="/api/opetaja/tunnikava/osa/ules"
+                              disabled={p.order === 1}
+                              title="Liiguta tunniosa üles"
+                              className="text-slate-500 hover:text-brand-600 disabled:opacity-20 disabled:hover:text-slate-500"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="submit"
+                              name="id"
+                              value={p.id}
+                              formAction="/api/opetaja/tunnikava/osa/alla"
+                              disabled={p.order === parts.length}
+                              title="Liiguta tunniosa alla"
+                              className="text-slate-500 hover:text-brand-600 disabled:opacity-20 disabled:hover:text-slate-500"
+                            >
+                              ▼
+                            </button>
+                          </span>
+                        </div>
+                      </td>
                       <td className="py-2 pr-2">
                         <input
                           type="text"

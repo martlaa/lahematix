@@ -55,6 +55,23 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
         </a>
       </div>
 
+      {(detail.previous || detail.next) && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-2 text-sm">
+          {detail.previous ? (
+            <a href={`/galerii/katsetund/${detail.previous.refId}`} className="text-brand-600 underline hover:no-underline">
+              ← Eelmine tund{detail.previous.topic ? ` (${detail.previous.topic})` : ''}
+            </a>
+          ) : (
+            <span />
+          )}
+          {detail.next && (
+            <a href={`/galerii/katsetund/${detail.next.refId}`} className="text-brand-600 underline hover:no-underline">
+              Järgmine tund{detail.next.topic ? ` (${detail.next.topic})` : ''} →
+            </a>
+          )}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
         <h2 className="font-semibold text-slate-900 mb-3">Tunni osad</h2>
         {detail.parts.length === 0 ? (

@@ -132,7 +132,35 @@ export default async function TeadurNaidistunnikavaPage(
                 <tbody>
                   {parts.map((p) => (
                     <tr key={p.id} className="border-b border-slate-100 align-top">
-                      <td className="py-2 pr-2">{p.order}</td>
+                      <td className="py-2 pr-2">
+                        <div className="flex items-center gap-1">
+                          <span>{p.order}</span>
+                          <span className="flex flex-col leading-none">
+                            <button
+                              type="submit"
+                              name="id"
+                              value={p.id}
+                              formAction="/api/teadur/naidistunnikava/osa/ules"
+                              disabled={p.order === 1}
+                              title="Liiguta tunniosa üles"
+                              className="text-slate-500 hover:text-brand-600 disabled:opacity-20 disabled:hover:text-slate-500"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="submit"
+                              name="id"
+                              value={p.id}
+                              formAction="/api/teadur/naidistunnikava/osa/alla"
+                              disabled={p.order === parts.length}
+                              title="Liiguta tunniosa alla"
+                              className="text-slate-500 hover:text-brand-600 disabled:opacity-20 disabled:hover:text-slate-500"
+                            >
+                              ▼
+                            </button>
+                          </span>
+                        </div>
+                      </td>
                       <td className="py-2 pr-2">
                         <input
                           type="text"

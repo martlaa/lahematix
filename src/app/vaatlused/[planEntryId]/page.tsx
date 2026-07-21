@@ -20,11 +20,35 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
     where: { id: params.planEntryId },
     include: {
       teacher: { include: { user: true, school: true } },
-      lessonPlan: { include: { parts: { orderBy: { order: 'asc' } }, comments: { include: { authorUser: true }, orderBy: { createdAt: 'asc' } } } },
+      lessonPlan: {
+        include: {
+          parts: { orderBy: { order: 'asc' } },
+          comments: { include: { authorUser: true }, orderBy: { createdAt: 'asc' } },
+          previousLessonPlan: { include: { researchPlanEntry: true } },
+          nextLessonPlan: { include: { researchPlanEntry: true } },
+        },
+      },
     },
   });
   if (!entry || entry.observerUserId !== session.userId) notFound();
   if (!entry.lessonPlan) notFound();
+
+  // Naaber-tund on lingina avatav ainult siis, kui käesolev vaatleja on ka
+  // selle vaatlejaks märgitud — muidu näidatakse ainult infona, ilma lingita,
+  // et vältida ootamatut "ei leitud" viga võõra tunni avamisel.
+  const adjacent = (
+    lp: { researchPlanEntry: { id: string; observerUserId: string | null; date: Date; topic: string | null } } | null,
+  ) =>
+    lp
+      ? {
+          entryId: lp.researchPlanEntry.id,
+          date: lp.researchPlanEntry.date,
+          topic: lp.researchPlanEntry.topic,
+          accessible: lp.researchPlanEntry.observerUserId === session.userId,
+        }
+      : null;
+  const previousAdjacent = adjacent(entry.lessonPlan.previousLessonPlan);
+  const nextAdjacent = adjacent(entry.lessonPlan.nextLessonPlan);
 
   const lessonPlan = entry.lessonPlan;
   const materials: MaterialsAnswers = lessonPlan.materialsJson ? JSON.parse(lessonPlan.materialsJson) : {};
@@ -56,6 +80,41 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
             Tunni teema: {entry.topic ?? '—'}
           </p>
         </div>
+
+        {(previousAdjacent || nextAdjacent) && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-2 text-sm">
+            {previousAdjacent ? (
+              previousAdjacent.accessible ? (
+                <a
+                  href={`/vaatlused/${previousAdjacent.entryId}`}
+                  className="text-brand-600 underline hover:no-underline"
+                >
+                  ← Eelmine tund ({previousAdjacent.date.toLocaleDateString('et-EE')}
+                  {previousAdjacent.topic ? `, ${previousAdjacent.topic}` : ''})
+                </a>
+              ) : (
+                <span className="text-slate-500">
+                  ← Eelmine tund ({previousAdjacent.date.toLocaleDateString('et-EE')}
+                  {previousAdjacent.topic ? `, ${previousAdjacent.topic}` : ''}) — sina pole selle vaatleja
+                </span>
+              )
+            ) : (
+              <span />
+            )}
+            {nextAdjacent &&
+              (nextAdjacent.accessible ? (
+                <a href={`/vaatlused/${nextAdjacent.entryId}`} className="text-brand-600 underline hover:no-underline">
+                  Järgmine tund ({nextAdjacent.date.toLocaleDateString('et-EE')}
+                  {nextAdjacent.topic ? `, ${nextAdjacent.topic}` : ''}) →
+                </a>
+              ) : (
+                <span className="text-slate-500">
+                  Järgmine tund ({nextAdjacent.date.toLocaleDateString('et-EE')}
+                  {nextAdjacent.topic ? `, ${nextAdjacent.topic}` : ''}) — sina pole selle vaatleja
+                </span>
+              ))}
+          </div>
+        )}
 
         {reviewOverdue && (
           <Alert kind="info">

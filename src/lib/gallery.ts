@@ -84,11 +84,21 @@ export interface GalleryPart {
   description: string | null;
 }
 
+export interface GalleryAdjacent {
+  refId: string;
+  topic: string | null;
+}
+
 export interface GalleryDetail extends GalleryItem {
   parts: GalleryPart[];
   materials: Record<string, string>;
   homeworkText: string | null;
   homeworkRelated: boolean;
+  // Eelmine/järgmine seotud katsetund (vt LessonPlan.previousLessonPlanId) —
+  // ainult siis täidetud, kui naabertund on ka ise galeriis avaldatud, kuna
+  // galerii külastaja ei saa navigeerida avaldamata sisu juurde.
+  previous: GalleryAdjacent | null;
+  next: GalleryAdjacent | null;
 }
 
 // Nagu getGalleryItemByRef, aga koos tunniosade/õppevara/kodutöö sisuga —
@@ -121,6 +131,8 @@ export async function getGalleryDetail(
       materials: s.materialsJson ? JSON.parse(s.materialsJson) : {},
       homeworkText: s.homeworkText,
       homeworkRelated: s.homeworkRelated,
+      previous: null,
+      next: null,
     };
   }
 
@@ -129,9 +141,19 @@ export async function getGalleryDetail(
     include: {
       parts: { orderBy: { order: 'asc' } },
       researchPlanEntry: { include: { teacher: { include: { user: true } } } },
+      previousLessonPlan: { include: { researchPlanEntry: true } },
+      nextLessonPlan: { include: { researchPlanEntry: true } },
     },
   });
   if (!lp || !lp.publishedToGalleryAt || lp.researchPlanEntry.hidden) return null;
+
+  const toAdjacent = (
+    candidate: { id: string; publishedToGalleryAt: Date | null; researchPlanEntry: { hidden: boolean; topic: string | null } } | null,
+  ): GalleryAdjacent | null =>
+    candidate && candidate.publishedToGalleryAt && !candidate.researchPlanEntry.hidden
+      ? { refId: candidate.id, topic: candidate.researchPlanEntry.topic }
+      : null;
+
   return {
     id: `katsetund:${lp.id}`,
     sourceType: 'KATSETUND',
@@ -148,5 +170,7 @@ export async function getGalleryDetail(
     materials: lp.materialsJson ? JSON.parse(lp.materialsJson) : {},
     homeworkText: lp.homeworkText,
     homeworkRelated: lp.homeworkRelated,
+    previous: toAdjacent(lp.previousLessonPlan),
+    next: toAdjacent(lp.nextLessonPlan),
   };
 }
