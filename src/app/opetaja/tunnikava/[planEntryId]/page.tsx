@@ -148,7 +148,7 @@ export default async function OpetajaTunnikavaPage(
           {parts.length === 0 ? (
             <p className="text-sm text-slate-500 mb-4">Tunniosi pole veel lisatud.</p>
           ) : (
-            <form className="mb-6">
+            <form method="post" className="mb-6">
               <table className="w-full text-xs min-w-[720px]">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-200">
@@ -240,8 +240,12 @@ export default async function OpetajaTunnikavaPage(
             </form>
           )}
 
+          <p className="text-xs text-slate-500 border-t border-slate-100 pt-4">
+            Tunniosi võib olla {MIN_PARTS}–{MAX_PARTS} (praegu lisatud {parts.length}).
+          </p>
+
           {parts.length < MAX_PARTS ? (
-            <form action="/api/opetaja/tunnikava/osa" method="post" className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+            <form action="/api/opetaja/tunnikava/osa" method="post" className="grid grid-cols-2 gap-3 pt-3">
               <input type="hidden" name="planEntryId" value={planEntry!.id} />
               <input
                 type="text"
@@ -283,9 +287,7 @@ export default async function OpetajaTunnikavaPage(
               </button>
             </form>
           ) : (
-            <p className="text-xs text-slate-500 border-t border-slate-100 pt-4">
-              Maksimaalne tunniosade arv ({MAX_PARTS}) on saavutatud.
-            </p>
+            <p className="text-xs text-slate-500 pt-3">Maksimaalne tunniosade arv ({MAX_PARTS}) on saavutatud.</p>
           )}
         </div>
 

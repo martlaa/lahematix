@@ -1,7 +1,7 @@
 import type { LessonPartType } from '@prisma/client';
 
-export const MIN_PARTS = 3;
-export const MAX_PARTS = 6;
+export const MIN_PARTS = 2;
+export const MAX_PARTS = 10;
 
 export const LESSON_PART_TYPE_OPTIONS: { value: LessonPartType; label: string }[] = [
   { value: 'OPETAJA_ESITLUS', label: 'Õpetaja esitlus' },
