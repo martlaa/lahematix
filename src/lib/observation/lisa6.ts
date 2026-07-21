@@ -1,13 +1,18 @@
-// Tunnivaatlusprotokoll (Lisa 6). Hindamistunnused (A–D domeenid, 12 tunnust)
-// on hardcoded siia, samamoodi nagu küsimustikud/testid/päevik — DB salvestab
-// ainult vastuseid (ObservationProtocol.ratingsJson). Checkpointide arv ja
-// pealkirjad tulevad dünaamiliselt tunnikava (LessonPlan) osadest, mitte
-// siitsamast failist.
+// Tunnivaatlusprotokoll (Lisa 6). Hindamistunnused (6 domeeni, 11 tunnust,
+// Teaching for Robust Understanding / TRU raamistikul põhinevad — vt
+// LAHEMATE_Lisa6_Tunnivaatlusprotokoll.docx) on hardcoded siia, samamoodi
+// nagu küsimustikud/testid/päevik — DB salvestab ainult vastuseid
+// (ObservationProtocol.ratingsJson). Checkpointide arv ja pealkirjad tulevad
+// dünaamiliselt tunnikava (LessonPlan) osadest, mitte siitsamast failist.
+//
+// NB! Varasem versioon põhines CLASS/Danielson raamistikul, mille kasutamiseks
+// projektil litsentsi ei ole — asendatud 2026-07-21 TRU raamistikuga (avalik,
+// UC Berkeley/MARS projekti töö), mida projektil on lubatud kasutada.
 
-export type ObservationDomainKey = 'A' | 'B' | 'C' | 'D';
+export type ObservationDomainKey = 'M' | 'K' | 'V' | 'O' | 'T' | 'MT';
 
 export interface ObservationItem {
-  key: string; // nt "A1"
+  key: string; // nt "M1"
   label: string;
 }
 
@@ -20,43 +25,56 @@ export interface ObservationDomain {
 
 export const OBSERVATION_DOMAINS: ObservationDomain[] = [
   {
-    key: 'A',
-    label: 'Emotsionaalne tugi ja õhkkond',
-    frameworkNote: 'CLASS: Emotional Support; Danielson 2a',
+    key: 'M',
+    label: 'Matemaatiline sisukus',
+    frameworkNote: 'TRU: Mathematics',
     items: [
-      { key: 'A1', label: 'Soe, positiivne suhtlus (õpetaja–õpilane, õpilased omavahel)' },
-      { key: 'A2', label: 'Õpetaja märkab ja reageerib õpilaste raskustele/tunnetele' },
-      { key: 'A3', label: 'Matemaatikaärevuse märke ei ole näha (kõhklus, vältimine, alahindamine)' },
+      { key: 'M1', label: 'Tunni matemaatiline sisu on hästiseostatud, mitte üksikute faktide/protseduuride kogum' },
+      { key: 'M2', label: 'Ülesanded võimaldavad mitut lahenduskäiku ja seoseid erinevate matemaatika valdkondade vahel' },
     ],
   },
   {
-    key: 'B',
-    label: 'Klassi juhtimine ja struktuur',
-    frameworkNote: 'CLASS: Classroom Organization; Danielson 2c, 3c',
+    key: 'K',
+    label: 'Kognitiivne nõudlikkus',
+    frameworkNote: 'TRU: Cognitive Demand',
     items: [
-      { key: 'B1', label: 'Selged juhised, sujuvad üleminekud, vähe kadunud aega' },
-      { key: 'B2', label: 'Õpilased hõivatud ülesandega; häirimist juhitakse tõhusalt' },
-      { key: 'B3', label: 'Tund järgib meetodi (Boaler/Liljedahl/Toh) põhivõtteid tunnikava kohaselt' },
+      { key: 'K1', label: 'Õpilastele antakse aega ja võimalusi produktiivseks takerdumiseks enne abi pakkumist' },
+      { key: 'K2', label: 'Õpilased tegelevad probleemilahendusega süvitsi, mitte ei kiirusta kohe valmislahenduseni' },
     ],
   },
   {
-    key: 'C',
-    label: 'Õpetuslik tugi ja mõtlemise arendamine',
-    frameworkNote: 'CLASS: Instructional Support; Danielson 3b, 3d',
+    key: 'V',
+    label: 'Võrdne juurdepääs matemaatikale',
+    frameworkNote: 'TRU: Equitable Access',
     items: [
-      { key: 'C1', label: 'Avatud küsimused, mis nõuavad põhjendamist, mitte meenutamist' },
-      { key: 'C2', label: 'Tagasiside konkreetne ja arengule suunatud (mitte ainult "õige/vale")' },
-      { key: 'C3', label: 'Õpilaste mõtlemine nähtav; takerdumist toetatakse enne sekkumist' },
+      { key: 'V1', label: 'Kõigil õpilastel, mitte ainult aktiivsematel/kiirematel, on võimalus matemaatilises mõtlemises osaleda' },
+      { key: 'V2', label: 'Õpetaja kaasab teadlikult ka vaiksemaid/tagasihoidlikumaid õpilasi' },
     ],
   },
   {
-    key: 'D',
-    label: 'Õpilaste kaasatus',
-    frameworkNote: 'CLASS: Student Engagement',
+    key: 'O',
+    label: 'Õpilase agentsus, omanikutunne ja identiteet',
+    frameworkNote: 'TRU: Agency, Ownership, Identity',
     items: [
-      { key: 'D1', label: 'Enamik õpilasi aktiivselt hõivatud (käitumuslik kaasatus)' },
-      { key: 'D2', label: 'Õpilased süvenevad sisusse, mitte pealiskaudsed (kognitiivne kaasatus)' },
-      { key: 'D3', label: 'Näha huvi/motivatsiooni ja koostööd matemaatika teemal' },
+      { key: 'O1', label: 'Õpilased selgitavad ja põhjendavad oma mõtlemist oma sõnadega, mitte ei korda õpetaja sõnu või õpikuteksti' },
+      { key: 'O2', label: 'Õpilased tunduvad matemaatikas pädevad ja aktiivsed, mitte ärevad/ebakindlad' },
+    ],
+  },
+  {
+    key: 'T',
+    label: 'Kujundav (õppimist toetav) tagasiside',
+    frameworkNote: 'TRU: Formative Assessment',
+    items: [
+      { key: 'T1', label: 'Õpetaja jälgib jooksvalt õpilaste mõtlemist (mitte ainult lõpptulemust) ja kohandab tagasisidet vastavalt' },
+      { key: 'T2', label: 'Tagasiside on konkreetne ja mõtlema suunav, mitte ainult "õige/vale"' },
+    ],
+  },
+  {
+    key: 'MT',
+    label: 'Meetodi truudus',
+    frameworkNote: 'LAHEMATE oma tunnus (mitte TRU)',
+    items: [
+      { key: 'MT1', label: 'Tund järgib valitud meetodi (Boaler / Liljedahl / Toh) põhimõtteid ja soovitusi vastavalt tunnikavale' },
     ],
   },
 ];
