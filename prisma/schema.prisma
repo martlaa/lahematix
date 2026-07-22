@@ -114,6 +114,8 @@ model User {
   exportRequestsMade    ExportRequest[]       @relation("ExportRequestedBy")
   exportRequestsDecided ExportRequest[]       @relation("ExportDecidedBy")
   appSettingsClosedBy   AppSettings[]
+  tasks                 Task[]
+  taskRatings           TaskRating[]
 
   @@index([role])
 }
@@ -340,8 +342,9 @@ model ResearchPlanEntry {
 }
 
 // Tunnikava (Lisa 11) — kuulub ühele uuringukava reale (1:1). Tunniosad
-// (LessonPlanPart) on eraldi tabel, kuna neid on muutuv arv (3–6) ja need
-// on ühtlasi aluseks tunnivaatlusprotokolli dünaamilistele checkpointidele.
+// (LessonPlanPart) on eraldi tabel, kuna neid on muutuv arv (3–6) ja iga
+// osa kohta peab tunnivaatlusprotokoll (Lisa 6c) pidama eraldi intsidentide
+// logi.
 
 model LessonPlan {
   id                  String   @id @default(cuid())
@@ -364,6 +367,7 @@ model LessonPlan {
   parts                LessonPlanPart[]
   comments             LessonPlanComment[]
   observationProtocols ObservationProtocol[]
+  taskUsages           TaskUsage[]
 }
 
 model LessonPlanPart {
@@ -395,12 +399,13 @@ model LessonPlanComment {
   @@index([lessonPlanId])
 }
 
-// Tunnivaatlusprotokoll (Lisa 6) — dünaamiline: checkpointide arv ja
-// pealkirjad tulevad LessonPlan'i tunniosadest (ratingsJson võti on
-// LessonPlanPart.id), mitte staatilisest I–III jaotusest. Iga vaatleja
-// (kellel LAHEMATIX konto — õpetaja-uurija või teadur) täidab oma
-// protokolli; sama tunnikava kohta võib olla mitu vaatlejat (reliaabluse
-// kontroll, vt Lisa 6 juhend).
+// Tunnivaatlusprotokoll (Lisa 6c) — kahes osas: (1) ratingsJson on ÜKS
+// struktureeritud TRU hinnang tunnile TERVIKUNA (itemKey -> {value, note}),
+// täidetav üks kord tunni lõpus; (2) incidentsJson on ajatempliga sündmuste
+// logi, kus iga kirje viitab konkreetsele LessonPlanPart.id-le (tunniosale),
+// mille juures see aset leidis. Iga vaatleja (kellel LAHEMATIX konto —
+// õpetaja-uurija või teadur) täidab oma protokolli; sama tunnikava kohta
+// võib olla mitu vaatlejat (reliaabluse kontroll, vt Lisa 6c juhend).
 
 model ObservationProtocol {
   id             String     @id @default(cuid())
@@ -408,8 +413,8 @@ model ObservationProtocol {
   lessonPlan     LessonPlan @relation(fields: [lessonPlanId], references: [id])
   observerUserId String
   observerUser   User       @relation(fields: [observerUserId], references: [id])
-  ratingsJson    String? // { [lessonPlanPartId]: { A1: {value, note}, ..., D3: {value, note} } }
-  incidentsJson  String? // [{ timeMin, description, construct, whoWith }]
+  ratingsJson    String? // { M1: {value, note}, ..., MT1: {value, note} } — terve tunni kohta, mitte tunniosade kaupa
+  incidentsJson  String? // [{ lessonPlanPartId, timeMin, description, constructs: string[], whoWith }]
   summaryJson    String? // { shortSummary, methodFidelity, surprises, recommendations }
   submittedAt    DateTime?
   publishedAt    DateTime? // täidetud alles siis, kui vaatleja otsustab protokolli õpetajale nähtavaks teha
@@ -453,8 +458,16 @@ model SampleLessonPlan {
   homeworkText    String?
   homeworkRelated Boolean  @default(false)
   hidden          Boolean  @default(false)
+  publishedToGalleryAt DateTime? // teaduri nõusolek avaldada see näidistund avalikus galeriis (Faas 5), CC-BY
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Näidistundide jada (sama muster mis LessonPlan.previousLessonPlanId) —
+  // teadur saab märkida, et üks näidistund jätkab otseselt tema teist
+  // näidistundi, moodustades näidiseks tervikliku järjestikuste tundide komplekti.
+  previousSampleLessonPlanId String?           @unique
+  previousSampleLessonPlan   SampleLessonPlan? @relation("SampleLessonPlanSequence", fields: [previousSampleLessonPlanId], references: [id], onDelete: SetNull)
+  nextSampleLessonPlan       SampleLessonPlan? @relation("SampleLessonPlanSequence")
 
   parts SampleLessonPlanPart[]
 
@@ -498,6 +511,66 @@ model InstrumentTrial {
   updatedAt      DateTime  @updatedAt
 
   @@unique([authorUserId, instrumentCode])
+}
+
+// --- Ülesannete pank (Faas 6): õpetajate ettepanekul lisatud jagatud
+// õppematerjalide/ülesannete kogu, avalik nagu tunnikavade galerii. Nii
+// õpetajad kui teadurid saavad ülesandeid lisada. Ülesande sisu on kas
+// väline link (GDocs/OneDrive) või üleslaetud fail (docx/jpg/pdf, kuni
+// 50 MB), mis salvestatakse privaatsesse uploads/task-bank kausta ja
+// serveeritakse vahendatud (loenduva) route'i kaudu, mitte public/ kaudu.
+// Populaarsuse näitajad: downloadCount (loendatakse nii faili- kui
+// lingiallalaadimisi), TaskUsage (taaskasutamine tunnikavades) ja
+// TaskRating (kasutajate 1-5 hinnang, üks hinnang kasutaja kohta).
+
+model Task {
+  id             String   @id @default(cuid())
+  authorUserId   String
+  authorUser     User     @relation(fields: [authorUserId], references: [id])
+  title          String
+  gradeBand      String? // "4-6" | "7-9" | "10-12"
+  topic          String?
+  appliedMethods Method[] @default([])
+  creditedAuthor String? // ülesande algallika autor (kui erineb üleslaadijast)
+  worksheetUrl   String? // väline link (GDocs/OneDrive)
+  filePath       String? // suhteline tee privaatses uploads/task-bank kaustas
+  fileName       String? // originaalnimi
+  fileMime       String?
+  fileSizeBytes  Int?
+  hidden         Boolean  @default(false)
+  downloadCount  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  usages  TaskUsage[]
+  ratings TaskRating[]
+
+  @@index([authorUserId])
+}
+
+model TaskUsage {
+  id           String     @id @default(cuid())
+  taskId       String
+  task         Task       @relation(fields: [taskId], references: [id])
+  lessonPlanId String
+  lessonPlan   LessonPlan @relation(fields: [lessonPlanId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([taskId, lessonPlanId])
+  @@index([lessonPlanId])
+}
+
+model TaskRating {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  value     Int // 1-5
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([taskId, userId])
 }
 
 // --- Andmete eluring (Faas 4 jätk): ekspordilubade taotlemine, andmete

@@ -21,7 +21,7 @@ const METHOD_LABEL: Record<string, string> = {
 export default async function OpetajaTunnikavaPage(
   props: {
     params: Promise<{ planEntryId: string }>;
-    searchParams: Promise<{ error?: string }>;
+    searchParams: Promise<{ error?: string; copied?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -42,6 +42,7 @@ export default async function OpetajaTunnikavaPage(
           comments: { include: { authorUser: true }, orderBy: { createdAt: 'asc' } },
           previousLessonPlan: { include: { researchPlanEntry: true } },
           nextLessonPlan: { include: { researchPlanEntry: true } },
+          taskUsages: { include: { task: true }, orderBy: { createdAt: 'asc' } },
         },
       },
     },
@@ -79,6 +80,24 @@ export default async function OpetajaTunnikavaPage(
       const methodMatch = s.appliedMethods.some((m) => planEntry!.appliedMethods.includes(m));
       const sampleTopic = (s.topic ?? '').trim().toLowerCase();
       const topicMatch = Boolean(entryTopic) && Boolean(sampleTopic) && (entryTopic.includes(sampleTopic) || sampleTopic.includes(entryTopic));
+      return methodMatch || topicMatch;
+    });
+  }
+
+  const attachedTaskIds = new Set((planEntry!.lessonPlan?.taskUsages ?? []).map((u) => u.taskId));
+  let matchingTasks: Prisma.TaskGetPayload<{ include: { authorUser: true } }>[] = [];
+  if (teacher!.gradeBand) {
+    const taskCandidates = await prisma.task.findMany({
+      where: { hidden: false, gradeBand: teacher!.gradeBand },
+      include: { authorUser: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    const entryTopic = (planEntry!.topic ?? '').trim().toLowerCase();
+    matchingTasks = taskCandidates.filter((t) => {
+      if (attachedTaskIds.has(t.id)) return false;
+      const methodMatch = t.appliedMethods.some((m) => planEntry!.appliedMethods.includes(m));
+      const taskTopic = (t.topic ?? '').trim().toLowerCase();
+      const topicMatch = Boolean(entryTopic) && Boolean(taskTopic) && (entryTopic.includes(taskTopic) || taskTopic.includes(entryTopic));
       return methodMatch || topicMatch;
     });
   }
@@ -170,7 +189,18 @@ export default async function OpetajaTunnikavaPage(
             <h2 className="font-semibold text-slate-900 mb-1">Näidistunnikavad eeskujuks</h2>
             <p className="text-xs text-slate-500 mb-3">
               Teadurite koostatud näidistunnid, millel on sinuga sama vanuseaste ning sama teema või meetod.
+              Sobiva leidmisel saad selle tunniosad ja õppevara kopeerida otse oma tunnikavasse ning seejärel
+              koopiat oma tunni jaoks kohandada.
             </p>
+            {searchParams.copied === '1' && (
+              <Alert kind="success">Näidistunnikava sisu kopeeriti sinu tunnikavasse — kohanda seda allpool oma tunni jaoks.</Alert>
+            )}
+            {searchParams.error === 'copy_has_parts' && (
+              <Alert kind="error">
+                Sul on sellel tunnil juba tunniosi lisatud — kopeerimine on lubatud ainult tühjale tunnikavale, et
+                mitte sinu senist sisu kogemata üle kirjutada. Eemalda enne kopeerimist oma tunniosad allpool.
+              </Alert>
+            )}
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-500 border-b border-slate-200">
@@ -178,6 +208,7 @@ export default async function OpetajaTunnikavaPage(
                   <th className="py-1 pr-2">Meetod</th>
                   <th className="py-1 pr-2">Teema</th>
                   <th className="py-1 pr-2">Tunniosi</th>
+                  <th className="py-1 pr-2"></th>
                   <th className="py-1 pr-2"></th>
                 </tr>
               </thead>
@@ -194,6 +225,15 @@ export default async function OpetajaTunnikavaPage(
                       <a href={`/opetaja/naidistunnikava/${s.id}`} className="text-brand-600 underline hover:no-underline">
                         Vaata
                       </a>
+                    </td>
+                    <td className="py-2 pr-2">
+                      <form action="/api/opetaja/tunnikava/kopeeri" method="post">
+                        <input type="hidden" name="planEntryId" value={planEntry!.id} />
+                        <input type="hidden" name="sampleLessonPlanId" value={s.id} />
+                        <button type="submit" className="text-brand-600 underline hover:no-underline">
+                          Kopeeri minu tunnikavasse
+                        </button>
+                      </form>
                     </td>
                   </tr>
                 ))}
@@ -438,6 +478,86 @@ export default async function OpetajaTunnikavaPage(
             </button>
           </form>
         </div>
+
+        {planEntry!.lessonPlan && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+            <h2 className="font-semibold text-slate-900 mb-1">Ülesannete pank</h2>
+            <p className="text-xs text-slate-500 mb-3">
+              Lisa tunnikavasse ülesandeid ja töölehti avalikust{' '}
+              <a href="/ulesanded" className="text-brand-600 underline hover:no-underline">
+                ülesannete pangast
+              </a>
+              .
+            </p>
+
+            {planEntry!.lessonPlan.taskUsages.length > 0 && (
+              <table className="w-full text-sm mb-4">
+                <tbody>
+                  {planEntry!.lessonPlan.taskUsages.map((u) => (
+                    <tr key={u.id} className="border-b border-slate-100">
+                      <td className="py-2 pr-2">{u.task.title}</td>
+                      <td className="py-2 pr-2">
+                        <a href={`/ulesanded/${u.task.id}`} className="text-brand-600 underline hover:no-underline">
+                          Vaata
+                        </a>
+                      </td>
+                      <td className="py-2">
+                        <form action="/api/opetaja/tunnikava/ulesanne/eemalda" method="post">
+                          <input type="hidden" name="planEntryId" value={planEntry!.id} />
+                          <input type="hidden" name="taskId" value={u.task.id} />
+                          <button type="submit" className="text-red-600 underline hover:no-underline">
+                            Eemalda
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {matchingTasks.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Praegu ei leitud sinu vanuseastme/meetodi/teemaga sobivaid ülesandeid pangast.
+              </p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500 border-b border-slate-200">
+                    <th className="py-1 pr-2">Pealkiri</th>
+                    <th className="py-1 pr-2">Teema</th>
+                    <th className="py-1 pr-2">Autor</th>
+                    <th className="py-1 pr-2"></th>
+                    <th className="py-1 pr-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchingTasks.map((t) => (
+                    <tr key={t.id} className="border-b border-slate-100">
+                      <td className="py-2 pr-2">{t.title}</td>
+                      <td className="py-2 pr-2">{t.topic ?? '—'}</td>
+                      <td className="py-2 pr-2">{t.creditedAuthor ?? t.authorUser.name}</td>
+                      <td className="py-2 pr-2">
+                        <a href={`/ulesanded/${t.id}`} className="text-brand-600 underline hover:no-underline">
+                          Vaata
+                        </a>
+                      </td>
+                      <td className="py-2 pr-2">
+                        <form action="/api/opetaja/tunnikava/ulesanne" method="post">
+                          <input type="hidden" name="planEntryId" value={planEntry!.id} />
+                          <input type="hidden" name="taskId" value={t.id} />
+                          <button type="submit" className="text-brand-600 underline hover:no-underline">
+                            Lisa tunnikavasse
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
 
         {planEntry!.observerUser && planEntry!.lessonPlan && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

@@ -60,9 +60,16 @@ export default async function OpetajaVaatlusprotokollPage(props: { params: Promi
         </div>
 
         {protocols.map((protocol) => {
-          const ratings: ObservationRatings = protocol.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
+          const ratings: Partial<ObservationRatings> = protocol.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
           const incidents: IncidentLogRow[] = protocol.incidentsJson ? JSON.parse(protocol.incidentsJson) : [];
           const summary: Partial<ObservationSummary> = protocol.summaryJson ? JSON.parse(protocol.summaryJson) : {};
+
+          const incidentsByPart = new Map<string, IncidentLogRow[]>();
+          for (const incident of incidents) {
+            const list = incidentsByPart.get(incident.lessonPlanPartId) ?? [];
+            list.push(incident);
+            incidentsByPart.set(incident.lessonPlanPartId, list);
+          }
 
           return (
             <div key={protocol.id} className="space-y-4">
@@ -76,7 +83,7 @@ export default async function OpetajaVaatlusprotokollPage(props: { params: Promi
               </div>
 
               {parts.map((p, idx) => {
-                const checkpointRatings = ratings[p.id] ?? {};
+                const partIncidents = incidentsByPart.get(p.id) ?? [];
                 return (
                   <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
                     <h3 className="font-semibold text-slate-900 mb-1">
@@ -85,57 +92,57 @@ export default async function OpetajaVaatlusprotokollPage(props: { params: Promi
                     <p className="text-xs text-slate-500 mb-4">
                       {LESSON_PART_TYPE_LABEL[p.type]} · {p.durationMin} min
                     </p>
-                    {OBSERVATION_DOMAINS.map((domain) => (
-                      <div key={domain.key} className="mb-4">
-                        <p className="text-sm font-medium text-slate-800">
-                          {domain.key}. {domain.label}
-                        </p>
-                        <table className="w-full text-xs mt-2 min-w-[500px]">
-                          <tbody>
-                            {domain.items.map((item) => {
-                              const r = checkpointRatings[item.key];
-                              return (
-                                <tr key={item.key} className="border-b border-slate-100 align-top">
-                                  <td className="py-2 pr-2 w-64">{item.label}</td>
-                                  <td className="py-2 pr-2 w-10 font-semibold">{r?.value ?? '—'}</td>
-                                  <td className="py-2 pr-2 text-slate-600">{r?.note || '—'}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
+                    {partIncidents.length === 0 ? (
+                      <p className="text-sm text-slate-500">Intsidente pole märgitud.</p>
+                    ) : (
+                      <table className="w-full text-xs min-w-[600px]">
+                        <thead>
+                          <tr className="text-left text-slate-500 border-b border-slate-200">
+                            <th className="py-1 pr-2">Aeg (min)</th>
+                            <th className="py-1 pr-2">Mis juhtus</th>
+                            <th className="py-1 pr-2">Seotud konstrukt(id)</th>
+                            <th className="py-1 pr-2">Kellega seotud</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {partIncidents.map((row, i) => (
+                            <tr key={i} className="border-b border-slate-100">
+                              <td className="py-1 pr-2">{row.timeMin}</td>
+                              <td className="py-1 pr-2">{row.description}</td>
+                              <td className="py-1 pr-2">{row.constructs.join(', ') || '—'}</td>
+                              <td className="py-1 pr-2">{row.whoWith}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 );
               })}
 
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
-                <h3 className="font-semibold text-slate-900 mb-3">Intsidentide ja tähelepanekute logi</h3>
-                {incidents.length === 0 ? (
-                  <p className="text-sm text-slate-500">Intsidente pole märgitud.</p>
-                ) : (
-                  <table className="w-full text-xs min-w-[600px]">
-                    <thead>
-                      <tr className="text-left text-slate-500 border-b border-slate-200">
-                        <th className="py-1 pr-2">Aeg (min)</th>
-                        <th className="py-1 pr-2">Mis juhtus</th>
-                        <th className="py-1 pr-2">Konstrukt</th>
-                        <th className="py-1 pr-2">Kellega seotud</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {incidents.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-100">
-                          <td className="py-1 pr-2">{row.timeMin}</td>
-                          <td className="py-1 pr-2">{row.description}</td>
-                          <td className="py-1 pr-2">{row.construct}</td>
-                          <td className="py-1 pr-2">{row.whoWith}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                <h3 className="font-semibold text-slate-900 mb-3">Struktureeritud hinnang tunnile tervikuna</h3>
+                {OBSERVATION_DOMAINS.map((domain) => (
+                  <div key={domain.key} className="mb-4">
+                    <p className="text-sm font-medium text-slate-800">
+                      {domain.key}. {domain.label}
+                    </p>
+                    <table className="w-full text-xs mt-2 min-w-[500px]">
+                      <tbody>
+                        {domain.items.map((item) => {
+                          const r = ratings[item.key];
+                          return (
+                            <tr key={item.key} className="border-b border-slate-100 align-top">
+                              <td className="py-2 pr-2 w-64">{item.label}</td>
+                              <td className="py-2 pr-2 w-10 font-semibold">{r?.value ?? '—'}</td>
+                              <td className="py-2 pr-2 text-slate-600">{r?.note || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-3">

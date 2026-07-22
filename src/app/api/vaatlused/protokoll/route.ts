@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
-import { OBSERVATION_DOMAINS, type ObservationRatings, type IncidentLogRow, type ObservationSummary } from '@/lib/observation/lisa6';
+import {
+  OBSERVATION_DOMAINS,
+  INCIDENT_ROWS_PER_PART,
+  type ObservationRatings,
+  type IncidentLogRow,
+  type ObservationSummary,
+} from '@/lib/observation/lisa6';
 
 const ALL_ITEM_KEYS = OBSERVATION_DOMAINS.flatMap((d) => d.items.map((i) => i.key));
 
@@ -28,27 +34,27 @@ export async function POST(req: NextRequest) {
   }
 
   const ratings: ObservationRatings = {};
-  for (const part of lessonPlan.parts) {
-    ratings[part.id] = {};
-    for (const itemKey of ALL_ITEM_KEYS) {
-      const valueRaw = String(form.get(`rating.${part.id}.${itemKey}`) ?? '').trim();
-      ratings[part.id][itemKey] = {
-        value: valueRaw ? Number(valueRaw) : null,
-        note: String(form.get(`note.${part.id}.${itemKey}`) ?? '').trim(),
-      };
-    }
+  for (const itemKey of ALL_ITEM_KEYS) {
+    const valueRaw = String(form.get(`rating.${itemKey}`) ?? '').trim();
+    ratings[itemKey] = {
+      value: valueRaw ? Number(valueRaw) : null,
+      note: String(form.get(`note.${itemKey}`) ?? '').trim(),
+    };
   }
 
   const incidents: IncidentLogRow[] = [];
-  for (let i = 0; i < 20; i++) {
-    const description = String(form.get(`incident.${i}.description`) ?? '').trim();
-    if (!description) continue;
-    incidents.push({
-      timeMin: String(form.get(`incident.${i}.timeMin`) ?? '').trim(),
-      description,
-      construct: String(form.get(`incident.${i}.construct`) ?? '').trim(),
-      whoWith: String(form.get(`incident.${i}.whoWith`) ?? '').trim(),
-    });
+  for (const part of lessonPlan.parts) {
+    for (let i = 0; i < INCIDENT_ROWS_PER_PART; i++) {
+      const description = String(form.get(`incident.${part.id}.${i}.description`) ?? '').trim();
+      if (!description) continue;
+      incidents.push({
+        lessonPlanPartId: part.id,
+        timeMin: String(form.get(`incident.${part.id}.${i}.timeMin`) ?? '').trim(),
+        description,
+        constructs: form.getAll(`incident.${part.id}.${i}.constructs`).map(String),
+        whoWith: String(form.get(`incident.${part.id}.${i}.whoWith`) ?? '').trim(),
+      });
+    }
   }
 
   const summary: ObservationSummary = {

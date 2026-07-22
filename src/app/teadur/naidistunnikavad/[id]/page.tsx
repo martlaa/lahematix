@@ -30,9 +30,19 @@ export default async function TeadurNaidistunnikavaPage(
 
   const plan = await prisma.sampleLessonPlan.findUnique({
     where: { id: params.id },
-    include: { parts: { orderBy: { order: 'asc' } } },
+    include: {
+      parts: { orderBy: { order: 'asc' } },
+      previousSampleLessonPlan: true,
+      nextSampleLessonPlan: true,
+    },
   });
   if (!plan || plan.authorUserId !== session.userId) notFound();
+
+  // Kandidaadid "eelmine tund" valikusse: kõik teised sama teaduri näidistunnid.
+  const otherSamplePlans = await prisma.sampleLessonPlan.findMany({
+    where: { authorUserId: session.userId, id: { not: plan.id } },
+    orderBy: { createdAt: 'desc' },
+  });
 
   const parts = plan.parts;
   const durationSum = parts.reduce((sum, p) => sum + p.durationMin, 0);
@@ -92,10 +102,73 @@ export default async function TeadurNaidistunnikavaPage(
               placeholder="Tunni teema"
               className="col-span-2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             />
+            <label className="col-span-2 flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="publishToGallery"
+                defaultChecked={Boolean(plan.publishedToGalleryAt)}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Avalikusta see näidistund avalikus galeriis (CC-BY litsentsiga)
+            </label>
             <button className="col-span-2 rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
               Salvesta
             </button>
           </form>
+        </div>
+
+        {(plan.previousSampleLessonPlan || plan.nextSampleLessonPlan) && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-2 text-sm">
+            {plan.previousSampleLessonPlan ? (
+              <a
+                href={`/teadur/naidistunnikavad/${plan.previousSampleLessonPlan.id}`}
+                className="text-brand-600 underline hover:no-underline"
+              >
+                ← Eelmine tund{plan.previousSampleLessonPlan.topic ? ` (${plan.previousSampleLessonPlan.topic})` : ''}
+              </a>
+            ) : (
+              <span />
+            )}
+            {plan.nextSampleLessonPlan && (
+              <a
+                href={`/teadur/naidistunnikavad/${plan.nextSampleLessonPlan.id}`}
+                className="text-brand-600 underline hover:no-underline"
+              >
+                Järgmine tund{plan.nextSampleLessonPlan.topic ? ` (${plan.nextSampleLessonPlan.topic})` : ''} →
+              </a>
+            )}
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h2 className="font-semibold text-slate-900 mb-2">Seotud näidistunnid</h2>
+          <p className="text-sm text-slate-600 mb-3">
+            Kui see näidistund jätkab otseselt mõnd teist sinu näidistundi, märgi see siin — nii moodustub
+            terviklik järjestikuste näidistundide komplekt, mida õpetajad ja teised näidistunnikavade
+            vaatajad saavad eelmise/järgmise tunni vahel liikudes läbi vaadata.
+          </p>
+          {otherSamplePlans.length === 0 ? (
+            <p className="text-sm text-slate-500">Ühtegi teist enda näidistundi pole veel lisatud.</p>
+          ) : (
+            <form action="/api/teadur/naidistunnikava/eelmine" method="post" className="flex flex-wrap items-center gap-3">
+              <input type="hidden" name="sampleLessonPlanId" value={plan.id} />
+              <select
+                name="previousSampleLessonPlanId"
+                defaultValue={plan.previousSampleLessonPlanId ?? ''}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">— pole eelmist tundi / esimene tund —</option>
+                {otherSamplePlans.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.topic ? s.topic : '(teema määramata)'} — {s.createdAt.toLocaleDateString('et-EE')}
+                  </option>
+                ))}
+              </select>
+              <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+                Salvesta
+              </button>
+            </form>
+          )}
         </div>
 
         {searchParams.error === 'max_parts' && (

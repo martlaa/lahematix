@@ -86,6 +86,9 @@ export default async function TeadurNaidistunnikavadPage() {
                     <th className="py-1 pr-2">Teema</th>
                     <th className="py-1 pr-2">Kestus</th>
                     <th className="py-1 pr-2">Tunniosi</th>
+                    <th className="py-1 pr-2 text-center" title="Avalda näidistund avalikus galeriis (CC-BY)">
+                      Galerii
+                    </th>
                     <th className="py-1 pr-2"></th>
                     <th className="py-1"></th>
                   </tr>
@@ -105,6 +108,34 @@ export default async function TeadurNaidistunnikavadPage() {
                         <td className="py-2 pr-2">{p.topic ?? '—'}</td>
                         <td className="py-2 pr-2">{p.durationMin ? `${p.durationMin} min` : '—'}</td>
                         <td className="py-2 pr-2">{p.parts.length}</td>
+                        <td className="py-2 pr-2 text-center">
+                          {p.hidden ? (
+                            p.publishedToGalleryAt ? 'Avaldatud' : '—'
+                          ) : p.publishedToGalleryAt ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="text-green-700">Avaldatud</span>
+                              <button
+                                type="submit"
+                                name="id"
+                                value={p.id}
+                                formAction="/api/teadur/naidistunnikava/galerii/tagasivotmine"
+                                className="text-red-600 underline hover:no-underline"
+                              >
+                                Võta tagasi
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="submit"
+                              name="id"
+                              value={p.id}
+                              formAction="/api/teadur/naidistunnikava/galerii/avalikusta"
+                              className="text-brand-600 underline hover:no-underline"
+                            >
+                              Avalikusta galeriis
+                            </button>
+                          )}
+                        </td>
                         <td className="py-2 pr-2">
                           {!p.hidden && (
                             <a

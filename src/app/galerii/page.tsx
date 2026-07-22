@@ -104,7 +104,15 @@ export default async function GaleriiPage(
     <>
       <PublicNav active="galerii" />
       <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">Tunnikavade galerii</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-slate-900">Tunnikavade galerii</h1>
+        <a
+          href="/ulesanded"
+          className="text-sm text-brand-600 underline hover:no-underline"
+        >
+          Ülesannete pank →
+        </a>
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <p className="text-sm text-slate-600">

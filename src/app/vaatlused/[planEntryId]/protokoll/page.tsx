@@ -6,14 +6,13 @@ import { Alert } from '@/components/ui';
 import { LESSON_PART_TYPE_LABEL } from '@/lib/lessonplan/types';
 import {
   OBSERVATION_DOMAINS,
-  RATING_SCALE_LABELS,
-  INCIDENT_CONSTRUCT_OPTIONS,
+  CONSTRUCT_OPTIONS,
+  INCIDENT_ROWS_PER_PART,
   type ObservationRatings,
   type IncidentLogRow,
   type ObservationSummary,
 } from '@/lib/observation/lisa6';
 
-const INCIDENT_ROW_COUNT = 8;
 const RATING_VALUES = [1, 2, 3, 4];
 
 export default async function VaatlusProtokollPage(props: { params: Promise<{ planEntryId: string }> }) {
@@ -37,16 +36,16 @@ export default async function VaatlusProtokollPage(props: { params: Promise<{ pl
     where: { lessonPlanId_observerUserId: { lessonPlanId: entry.lessonPlan.id, observerUserId: session.userId } },
   });
 
-  const ratings: ObservationRatings = protocol?.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
+  const ratings: Partial<ObservationRatings> = protocol?.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
   const incidents: IncidentLogRow[] = protocol?.incidentsJson ? JSON.parse(protocol.incidentsJson) : [];
   const summary: Partial<ObservationSummary> = protocol?.summaryJson ? JSON.parse(protocol.summaryJson) : {};
 
-  const incidentRows: IncidentLogRow[] = Array.from({ length: INCIDENT_ROW_COUNT }, (_, i) => ({
-    timeMin: incidents[i]?.timeMin ?? '',
-    description: incidents[i]?.description ?? '',
-    construct: incidents[i]?.construct ?? '',
-    whoWith: incidents[i]?.whoWith ?? '',
-  }));
+  const incidentsByPart = new Map<string, IncidentLogRow[]>();
+  for (const incident of incidents) {
+    const list = incidentsByPart.get(incident.lessonPlanPartId) ?? [];
+    list.push(incident);
+    incidentsByPart.set(incident.lessonPlanPartId, list);
+  }
 
   return (
     <>
@@ -80,7 +79,14 @@ export default async function VaatlusProtokollPage(props: { params: Promise<{ pl
             <input type="hidden" name="planEntryId" value={entry.id} />
 
             {parts.map((p, idx) => {
-              const checkpointRatings = ratings[p.id] ?? {};
+              const existing = incidentsByPart.get(p.id) ?? [];
+              const rows: IncidentLogRow[] = Array.from({ length: INCIDENT_ROWS_PER_PART }, (_, i) => ({
+                lessonPlanPartId: p.id,
+                timeMin: existing[i]?.timeMin ?? '',
+                description: existing[i]?.description ?? '',
+                constructs: existing[i]?.constructs ?? [],
+                whoWith: existing[i]?.whoWith ?? '',
+              }));
               return (
                 <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
                   <h2 className="font-semibold text-slate-900 mb-1">
@@ -90,115 +96,119 @@ export default async function VaatlusProtokollPage(props: { params: Promise<{ pl
                     {LESSON_PART_TYPE_LABEL[p.type]} · {p.durationMin} min
                     {p.description ? ` · ${p.description}` : ''}
                   </p>
-
-                  {OBSERVATION_DOMAINS.map((domain) => (
-                    <div key={domain.key} className="mb-4">
-                      <p className="text-sm font-medium text-slate-800">
-                        {domain.key}. {domain.label}
-                      </p>
-                      <table className="w-full text-xs mt-2 min-w-[600px]">
-                        <tbody>
-                          {domain.items.map((item) => {
-                            const current = checkpointRatings[item.key];
-                            return (
-                              <tr key={item.key} className="border-b border-slate-100 align-top">
-                                <td className="py-2 pr-2 w-64">{item.label}</td>
-                                <td className="py-2 pr-2">
-                                  <div className="flex gap-2">
-                                    {RATING_VALUES.map((v) => (
-                                      <label key={v} className="flex items-center gap-1">
-                                        <input
-                                          type="radio"
-                                          name={`rating.${p.id}.${item.key}`}
-                                          value={v}
-                                          defaultChecked={current?.value === v}
-                                          required
-                                        />
-                                        {v}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="py-2 pr-2 w-56">
-                                  <input
-                                    type="text"
-                                    name={`note.${p.id}.${item.key}`}
-                                    defaultValue={current?.note ?? ''}
-                                    placeholder="Märkus / tõendus"
-                                    className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
+                  <p className="text-xs text-slate-500 mb-3">
+                    Kirjuta jooksvalt üles kõik märkimisväärsed hetked, mis struktureeritud hinnangusse ei mahu
+                    (tagasiside episoodid, ärevuse ilmingud, "aha-hetked", konfliktid, motiveerivad episoodid jms).
+                  </p>
+                  <table className="w-full text-xs min-w-[720px]">
+                    <thead>
+                      <tr className="text-left text-slate-500 border-b border-slate-200">
+                        <th className="py-1 pr-2">Aeg (min)</th>
+                        <th className="py-1 pr-2">Mis juhtus (lühikirjeldus, võimalusel tsitaat)</th>
+                        <th className="py-1 pr-2">Seotud konstrukt(id)</th>
+                        <th className="py-1 pr-2">Kellega seotud</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, i) => (
+                        <tr key={i} className="border-b border-slate-100">
+                          <td className="py-1 pr-2">
+                            <input
+                              type="text"
+                              name={`incident.${p.id}.${i}.timeMin`}
+                              defaultValue={row.timeMin}
+                              className="w-16 rounded border border-slate-300 px-1 py-1 text-xs"
+                            />
+                          </td>
+                          <td className="py-1 pr-2">
+                            <input
+                              type="text"
+                              name={`incident.${p.id}.${i}.description`}
+                              defaultValue={row.description}
+                              className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
+                            />
+                          </td>
+                          <td className="py-1 pr-2">
+                            <select
+                              name={`incident.${p.id}.${i}.constructs`}
+                              defaultValue={row.constructs}
+                              multiple
+                              size={3}
+                              className="w-40 rounded border border-slate-300 px-1 py-1 text-xs"
+                            >
+                              {CONSTRUCT_OPTIONS.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="py-1 pr-2">
+                            <input
+                              type="text"
+                              name={`incident.${p.id}.${i}.whoWith`}
+                              defaultValue={row.whoWith}
+                              className="w-32 rounded border border-slate-300 px-1 py-1 text-xs"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               );
             })}
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
-              <h2 className="font-semibold text-slate-900 mb-1">Intsidentide ja tähelepanekute logi</h2>
+              <h2 className="font-semibold text-slate-900 mb-1">Struktureeritud hinnang tunnile tervikuna</h2>
               <p className="text-xs text-slate-500 mb-4">
-                Kirjuta üles märkimisväärsed hetked, mis struktureeritud hinnangutesse ei mahu. Konstrukti
-                lühikoodid: {INCIDENT_CONSTRUCT_OPTIONS.join(' / ')}.
+                Täida see osa vahetult pärast tunni lõppu. Skaala: 1 = ei märganud / madal, 2 = pigem mitte /
+                kesk-madal, 3 = pigem jah / kesk-kõrge, 4 = selgelt näha / kõrge.
               </p>
-              <table className="w-full text-xs min-w-[700px]">
-                <thead>
-                  <tr className="text-left text-slate-500 border-b border-slate-200">
-                    <th className="py-1 pr-2">Aeg (min)</th>
-                    <th className="py-1 pr-2">Mis juhtus</th>
-                    <th className="py-1 pr-2">Konstrukt</th>
-                    <th className="py-1 pr-2">Kellega seotud</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incidentRows.map((row, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="py-1 pr-2">
-                        <input
-                          type="text"
-                          name={`incident.${i}.timeMin`}
-                          defaultValue={row.timeMin}
-                          className="w-16 rounded border border-slate-300 px-1 py-1 text-xs"
-                        />
-                      </td>
-                      <td className="py-1 pr-2">
-                        <input
-                          type="text"
-                          name={`incident.${i}.description`}
-                          defaultValue={row.description}
-                          className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
-                        />
-                      </td>
-                      <td className="py-1 pr-2">
-                        <select
-                          name={`incident.${i}.construct`}
-                          defaultValue={row.construct}
-                          className="rounded border border-slate-300 px-1 py-1 text-xs"
-                        >
-                          <option value="">—</option>
-                          {INCIDENT_CONSTRUCT_OPTIONS.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-1 pr-2">
-                        <input
-                          type="text"
-                          name={`incident.${i}.whoWith`}
-                          defaultValue={row.whoWith}
-                          className="w-32 rounded border border-slate-300 px-1 py-1 text-xs"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {OBSERVATION_DOMAINS.map((domain) => (
+                <div key={domain.key} className="mb-4">
+                  <p className="text-sm font-medium text-slate-800">
+                    {domain.key}. {domain.label}
+                  </p>
+                  <table className="w-full text-xs mt-2 min-w-[600px]">
+                    <tbody>
+                      {domain.items.map((item) => {
+                        const current = ratings[item.key];
+                        return (
+                          <tr key={item.key} className="border-b border-slate-100 align-top">
+                            <td className="py-2 pr-2 w-64">{item.label}</td>
+                            <td className="py-2 pr-2">
+                              <div className="flex gap-2">
+                                {RATING_VALUES.map((v) => (
+                                  <label key={v} className="flex items-center gap-1">
+                                    <input
+                                      type="radio"
+                                      name={`rating.${item.key}`}
+                                      value={v}
+                                      defaultChecked={current?.value === v}
+                                      required
+                                    />
+                                    {v}
+                                  </label>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-2 pr-2 w-56">
+                              <input
+                                type="text"
+                                name={`note.${item.key}`}
+                                defaultValue={current?.note ?? ''}
+                                placeholder="Märkus / tõendus"
+                                className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
@@ -214,7 +224,8 @@ export default async function VaatlusProtokollPage(props: { params: Promise<{ pl
               </label>
               <label className="block">
                 <span className="block text-sm font-medium text-slate-700 mb-1">
-                  Kas ja kuidas tund järgis kavandatud meetodi põhivõtteid? Too seos tunnikavaga.
+                  Mil määral ja kuidas tund järgis kavandatud meetodi (Boaler / Liljedahl / Toh) põhimõtteid ja
+                  soovitusi? Hinda tunnis toimunu seost tunnikavas plaanitud metoodikaga või sellest kõrvalekaldumist.
                 </span>
                 <textarea
                   name="methodFidelity"

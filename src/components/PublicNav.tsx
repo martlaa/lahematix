@@ -1,4 +1,4 @@
-export function PublicNav({ active }: { active?: 'home' | 'galerii' }) {
+export function PublicNav({ active }: { active?: 'home' | 'galerii' | 'ulesanded' }) {
   return (
     <header className="bg-brand-700 text-white">
       <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
@@ -15,6 +15,12 @@ export function PublicNav({ active }: { active?: 'home' | 'galerii' }) {
             className={active === 'galerii' ? 'font-semibold underline' : 'hover:underline'}
           >
             Tunnikavade galerii
+          </a>
+          <a
+            href="/ulesanded"
+            className={active === 'ulesanded' ? 'font-semibold underline' : 'hover:underline'}
+          >
+            Ülesannete pank
           </a>
           <a
             href="/login"

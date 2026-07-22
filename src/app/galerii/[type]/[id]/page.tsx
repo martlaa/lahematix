@@ -58,14 +58,14 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
       {(detail.previous || detail.next) && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-2 text-sm">
           {detail.previous ? (
-            <a href={`/galerii/katsetund/${detail.previous.refId}`} className="text-brand-600 underline hover:no-underline">
+            <a href={`/galerii/${params.type}/${detail.previous.refId}`} className="text-brand-600 underline hover:no-underline">
               ← Eelmine tund{detail.previous.topic ? ` (${detail.previous.topic})` : ''}
             </a>
           ) : (
             <span />
           )}
           {detail.next && (
-            <a href={`/galerii/katsetund/${detail.next.refId}`} className="text-brand-600 underline hover:no-underline">
+            <a href={`/galerii/${params.type}/${detail.next.refId}`} className="text-brand-600 underline hover:no-underline">
               Järgmine tund{detail.next.topic ? ` (${detail.next.topic})` : ''} →
             </a>
           )}

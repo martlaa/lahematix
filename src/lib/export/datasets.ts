@@ -331,45 +331,33 @@ const ALL_ITEM_KEYS = OBSERVATION_DOMAINS.flatMap((d) => d.items.map((i) => ({ k
 async function buildVaatlusprotokollHinnangud(): Promise<Dataset> {
   const [protocols, teacherByUserId] = await Promise.all([
     prisma.observationProtocol.findMany({
-      include: {
-        lessonPlan: { include: { researchPlanEntry: { include: { teacher: true } }, parts: true } },
-      },
+      include: { lessonPlan: { include: { researchPlanEntry: { include: { teacher: true } } } } },
       orderBy: { createdAt: 'asc' },
     }),
     teacherPseudonymByUserId(),
   ]);
 
-  const partsById = new Map<string, { order: number; title: string }>();
   const rows: CellValue[][] = [];
 
   for (const protocol of protocols) {
     const entry = protocol.lessonPlan.researchPlanEntry;
     const observerPseudonym = teacherByUserId.get(protocol.observerUserId) ?? 'TEADUR';
-    const ratings: ObservationRatings = protocol.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
+    const ratings: Partial<ObservationRatings> = protocol.ratingsJson ? JSON.parse(protocol.ratingsJson) : {};
 
-    for (const part of protocol.lessonPlan.parts) {
-      partsById.set(part.id, { order: part.order, title: part.title });
-    }
-
-    for (const partId of Object.keys(ratings)) {
-      const part = partsById.get(partId);
-      for (const { key, label } of ALL_ITEM_KEYS) {
-        const item = ratings[partId][key];
-        if (!item) continue;
-        rows.push([
-          entry.teacher.pseudonymCode,
-          isoOrNull(entry.date),
-          entry.topic,
-          observerPseudonym,
-          part?.order ?? null,
-          part?.title ?? null,
-          key,
-          label,
-          item.value,
-          item.note || null,
-          protocol.publishedAt ? true : false,
-        ]);
-      }
+    for (const { key, label } of ALL_ITEM_KEYS) {
+      const item = ratings[key];
+      if (!item) continue;
+      rows.push([
+        entry.teacher.pseudonymCode,
+        isoOrNull(entry.date),
+        entry.topic,
+        observerPseudonym,
+        key,
+        label,
+        item.value,
+        item.note || null,
+        protocol.publishedAt ? true : false,
+      ]);
     }
   }
 
@@ -379,8 +367,6 @@ async function buildVaatlusprotokollHinnangud(): Promise<Dataset> {
       'Tunni kuupäev',
       'Tunni teema',
       'Vaatleja pseudonüüm',
-      'Tunniosa nr',
-      'Tunniosa nimetus',
       'Tunnus',
       'Tunnuse kirjeldus',
       'Hinnang (1-4)',
@@ -394,7 +380,9 @@ async function buildVaatlusprotokollHinnangud(): Promise<Dataset> {
 async function buildVaatlusprotokollIntsidendid(): Promise<Dataset> {
   const [protocols, teacherByUserId] = await Promise.all([
     prisma.observationProtocol.findMany({
-      include: { lessonPlan: { include: { researchPlanEntry: { include: { teacher: true } } } } },
+      include: {
+        lessonPlan: { include: { researchPlanEntry: { include: { teacher: true } }, parts: true } },
+      },
       orderBy: { createdAt: 'asc' },
     }),
     teacherPseudonymByUserId(),
@@ -404,23 +392,38 @@ async function buildVaatlusprotokollIntsidendid(): Promise<Dataset> {
   for (const protocol of protocols) {
     const entry = protocol.lessonPlan.researchPlanEntry;
     const observerPseudonym = teacherByUserId.get(protocol.observerUserId) ?? 'TEADUR';
+    const partsById = new Map(protocol.lessonPlan.parts.map((p) => [p.id, { order: p.order, title: p.title }]));
     const incidents: IncidentLogRow[] = protocol.incidentsJson ? JSON.parse(protocol.incidentsJson) : [];
     for (const incident of incidents) {
+      const part = partsById.get(incident.lessonPlanPartId);
       rows.push([
         entry.teacher.pseudonymCode,
         isoOrNull(entry.date),
         entry.topic,
         observerPseudonym,
+        part?.order ?? null,
+        part?.title ?? null,
         incident.timeMin,
         incident.description,
-        incident.construct,
+        incident.constructs.join('; '),
         incident.whoWith,
       ]);
     }
   }
 
   return {
-    headers: ['Õpetaja pseudonüüm', 'Tunni kuupäev', 'Tunni teema', 'Vaatleja pseudonüüm', 'Aeg (min)', 'Mis juhtus', 'Konstrukt', 'Kellega seotud'],
+    headers: [
+      'Õpetaja pseudonüüm',
+      'Tunni kuupäev',
+      'Tunni teema',
+      'Vaatleja pseudonüüm',
+      'Tunniosa nr',
+      'Tunniosa nimetus',
+      'Aeg (min)',
+      'Mis juhtus',
+      'Seotud konstrukt(id)',
+      'Kellega seotud',
+    ],
     rows,
   };
 }

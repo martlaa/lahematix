@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
     VALID_METHODS.includes(m as Method),
   );
 
+  const publishToGallery = form.get('publishToGallery') === 'on';
+  const alreadyPublished = plan.publishedToGalleryAt !== null;
+
   await prisma.sampleLessonPlan.update({
     where: { id },
     data: {
@@ -37,6 +40,9 @@ export async function POST(req: NextRequest) {
       durationMin: durationMinRaw ? Number(durationMinRaw) : null,
       appliedMethods,
       topic: String(form.get('topic') ?? '').trim() || null,
+      ...(publishToGallery !== alreadyPublished
+        ? { publishedToGalleryAt: publishToGallery ? new Date() : null }
+        : {}),
     },
   });
 

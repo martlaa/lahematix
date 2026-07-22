@@ -1,13 +1,19 @@
-// Tunnivaatlusprotokoll (Lisa 6). Hindamistunnused (6 domeeni, 11 tunnust,
+// Tunnivaatlusprotokoll (Lisa 6c). Hindamistunnused (6 domeeni, 11 tunnust,
 // Teaching for Robust Understanding / TRU raamistikul põhinevad — vt
-// LAHEMATE_Lisa6_Tunnivaatlusprotokoll.docx) on hardcoded siia, samamoodi
+// LAHEMATE_Lisa6c_Tunnivaatlusprotokoll.docx) on hardcoded siia, samamoodi
 // nagu küsimustikud/testid/päevik — DB salvestab ainult vastuseid
-// (ObservationProtocol.ratingsJson). Checkpointide arv ja pealkirjad tulevad
-// dünaamiliselt tunnikava (LessonPlan) osadest, mitte siitsamast failist.
+// (ObservationProtocol.ratingsJson).
 //
 // NB! Varasem versioon põhines CLASS/Danielson raamistikul, mille kasutamiseks
 // projektil litsentsi ei ole — asendatud 2026-07-21 TRU raamistikuga (avalik,
 // UC Berkeley/MARS projekti töö), mida projektil on lubatud kasutada.
+//
+// NB! 2026-07-22: vaatlejate tagasiside põhjal jagati protokoll kaheks —
+// (1) ajatempliga intsidentide/sündmuste logi TUNNIOSA kohta (vabas vormis
+// kirjeldus + konstrukti valik menüüst, mitte hinnang), ja (2) struktureeritud
+// TRU 1-4 hinnang TUNNILE TERVIKUNA, täidetav üks kord tunni lõpul — varem
+// tuli 11 tunnust hinnata iga tunniosa kohta eraldi, mis osutus vaatlejale
+// liiga koormavaks.
 
 export type ObservationDomainKey = 'M' | 'K' | 'V' | 'O' | 'T' | 'MT';
 
@@ -86,31 +92,46 @@ export const RATING_SCALE_LABELS: Record<number, string> = {
   4: 'selgelt näha / kõrge',
 };
 
-export const INCIDENT_CONSTRUCT_OPTIONS = [
-  'TAGASISIDE',
-  'ÄREVUS',
-  'MOTIVATSIOON',
-  'MÕTLEMINE',
-  'KOOSTÖÖ',
-  'KÄITUMINE',
-  'MUU',
+// Seotud konstruktid — LAHEMATE teoreetilise raamistiku fikseeritud sõnavara
+// (vt Lisa 6c juhend "vali menüüst"), vaatleja valib intsidendi kohta ühe või
+// mitu, mitte ei sisesta ise vabas vormis.
+export const CONSTRUCT_OPTIONS = [
+  'Agentsus',
+  'Kognitiivne kaasatus',
+  'Dweck: juurdekasvu-uskumus',
+  'Dweck: jäävuskumus',
+  'Matemaatiline mõtlemine',
+  'Toestamine',
+  'Tagasiside',
+  'Motivatsioon',
+  'Matemaatikaärevus',
+  'Ülesande esitamine',
+  'Polya: ülesande mõistmine',
+  'Polya: lahenduse kavandamine',
+  'Polya: lahendamine',
+  'Polya: lahenduse hindamine',
+  'Muu',
 ];
+
+// Iga tunniosa intsidentide logis kuvatavate tühjade ridade arv (vaatleja
+// täidab nii mitu, kui vaja, ülejäänud tühjad read jäetakse salvestamisel
+// kõrvale — vt api/vaatlused/protokoll/route.ts).
+export const INCIDENT_ROWS_PER_PART = 6;
 
 export interface ItemRating {
   value: number | null; // 1-4
   note: string;
 }
 
-export type CheckpointRatings = Record<string, ItemRating>; // itemKey -> rating
-
-export interface ObservationRatings {
-  [lessonPlanPartId: string]: CheckpointRatings;
-}
+// ÜKS struktureeritud TRU hinnang tunnile TERVIKUNA (mitte enam tunniosade
+// kaupa) — täidetakse üks kord tunni lõpus.
+export type ObservationRatings = Record<string, ItemRating>; // itemKey -> rating
 
 export interface IncidentLogRow {
+  lessonPlanPartId: string;
   timeMin: string;
   description: string;
-  construct: string;
+  constructs: string[]; // CONSTRUCT_OPTIONS väärtused, valitud menüüst
   whoWith: string;
 }
 

@@ -25,7 +25,7 @@ export interface GalleryItem {
 export async function getGalleryItems(): Promise<GalleryItem[]> {
   const [samples, lessonPlans] = await Promise.all([
     prisma.sampleLessonPlan.findMany({
-      where: { hidden: false },
+      where: { hidden: false, publishedToGalleryAt: { not: null } },
       include: { authorUser: true, parts: true },
     }),
     prisma.lessonPlan.findMany({
@@ -48,7 +48,7 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
     authorRoleLabel: 'Teadur',
     durationMin: s.durationMin,
     partsCount: s.parts.length,
-    publishedAt: s.createdAt,
+    publishedAt: s.publishedToGalleryAt as Date,
   }));
 
   const lessonPlanItems: GalleryItem[] = lessonPlans.map((lp) => ({
@@ -112,9 +112,22 @@ export async function getGalleryDetail(
   if (sourceType === 'NAIDISTUND') {
     const s = await prisma.sampleLessonPlan.findUnique({
       where: { id: refId },
-      include: { authorUser: true, parts: { orderBy: { order: 'asc' } } },
+      include: {
+        authorUser: true,
+        parts: { orderBy: { order: 'asc' } },
+        previousSampleLessonPlan: true,
+        nextSampleLessonPlan: true,
+      },
     });
-    if (!s || s.hidden) return null;
+    if (!s || s.hidden || !s.publishedToGalleryAt) return null;
+
+    const toSampleAdjacent = (
+      candidate: { id: string; hidden: boolean; publishedToGalleryAt: Date | null; topic: string | null } | null,
+    ): GalleryAdjacent | null =>
+      candidate && !candidate.hidden && candidate.publishedToGalleryAt
+        ? { refId: candidate.id, topic: candidate.topic }
+        : null;
+
     return {
       id: `naidistund:${s.id}`,
       sourceType: 'NAIDISTUND',
@@ -126,13 +139,13 @@ export async function getGalleryDetail(
       authorRoleLabel: 'Teadur',
       durationMin: s.durationMin,
       partsCount: s.parts.length,
-      publishedAt: s.createdAt,
+      publishedAt: s.publishedToGalleryAt,
       parts: s.parts,
       materials: s.materialsJson ? JSON.parse(s.materialsJson) : {},
       homeworkText: s.homeworkText,
       homeworkRelated: s.homeworkRelated,
-      previous: null,
-      next: null,
+      previous: toSampleAdjacent(s.previousSampleLessonPlan),
+      next: toSampleAdjacent(s.nextSampleLessonPlan),
     };
   }
 
