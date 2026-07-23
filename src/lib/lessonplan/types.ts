@@ -25,4 +25,12 @@ export const MATERIAL_OPTIONS: { key: string; label: string; hasLink: boolean }[
   { key: 'muu', label: 'Muu', hasLink: true },
 ];
 
-export type MaterialsAnswers = Record<string, string>; // key present = checked; value = link/tekst (võib olla tühi string)
+// key present = linnuke märgitud; väärtus = selle materjalitüübi lisatud
+// kirjete (linkide/failide/tekstide) loend, kuna igat tüüpi võib olla mitu
+// (nt mitu esitlust või mitu ülesannet).
+export type MaterialsAnswers = Record<string, string[]>;
+
+// Iga materjalitüübi kohta kuvatava sisestusrea (lingi/teksti) maksimumarv —
+// vaba rida jäetakse salvestamisel kõrvale, seega tühjaks tegemine + Salvesta
+// eemaldabki selle kirje.
+export const MATERIAL_ITEMS_PER_TYPE = 4;

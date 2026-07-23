@@ -15,6 +15,13 @@ export interface GalleryItem {
   durationMin: number | null;
   partsCount: number;
   publishedAt: Date;
+  avgRating: number | null;
+  ratingCount: number;
+}
+
+function average(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
 // Avalik tunnikavade galerii (Faas 5): koondab teaduri näidistunnikavad
@@ -26,12 +33,13 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
   const [samples, lessonPlans] = await Promise.all([
     prisma.sampleLessonPlan.findMany({
       where: { hidden: false, publishedToGalleryAt: { not: null } },
-      include: { authorUser: true, parts: true },
+      include: { authorUser: true, parts: true, ratings: true },
     }),
     prisma.lessonPlan.findMany({
       where: { publishedToGalleryAt: { not: null }, researchPlanEntry: { hidden: false } },
       include: {
         parts: true,
+        ratings: true,
         researchPlanEntry: { include: { teacher: { include: { user: true } } } },
       },
     }),
@@ -49,6 +57,8 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
     durationMin: s.durationMin,
     partsCount: s.parts.length,
     publishedAt: s.publishedToGalleryAt as Date,
+    avgRating: average(s.ratings.map((r) => r.value)),
+    ratingCount: s.ratings.length,
   }));
 
   const lessonPlanItems: GalleryItem[] = lessonPlans.map((lp) => ({
@@ -63,6 +73,8 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
     durationMin: lp.researchPlanEntry.durationMin,
     partsCount: lp.parts.length,
     publishedAt: lp.publishedToGalleryAt as Date,
+    avgRating: average(lp.ratings.map((r) => r.value)),
+    ratingCount: lp.ratings.length,
   }));
 
   return [...sampleItems, ...lessonPlanItems];
@@ -89,11 +101,20 @@ export interface GalleryAdjacent {
   topic: string | null;
 }
 
+export interface GalleryAttachedTask {
+  id: string;
+  title: string;
+}
+
 export interface GalleryDetail extends GalleryItem {
   parts: GalleryPart[];
-  materials: Record<string, string>;
+  materials: Record<string, string[]>;
   homeworkText: string | null;
   homeworkRelated: boolean;
+  // Ülesannete pangast tunnikavasse/näidistunnikavasse lisatud ülesanded (vt
+  // TaskUsage/SampleTaskUsage) — kuvatakse galeriis "Ülesanded/probleemid"
+  // rea juures. Peidetud ülesanded on siit välja jäetud.
+  attachedTasks: GalleryAttachedTask[];
   // Eelmine/järgmine seotud katsetund (vt LessonPlan.previousLessonPlanId) —
   // ainult siis täidetud, kui naabertund on ka ise galeriis avaldatud, kuna
   // galerii külastaja ei saa navigeerida avaldamata sisu juurde.
@@ -117,6 +138,8 @@ export async function getGalleryDetail(
         parts: { orderBy: { order: 'asc' } },
         previousSampleLessonPlan: true,
         nextSampleLessonPlan: true,
+        taskUsages: { include: { task: true } },
+        ratings: true,
       },
     });
     if (!s || s.hidden || !s.publishedToGalleryAt) return null;
@@ -140,10 +163,13 @@ export async function getGalleryDetail(
       durationMin: s.durationMin,
       partsCount: s.parts.length,
       publishedAt: s.publishedToGalleryAt,
+      avgRating: average(s.ratings.map((r) => r.value)),
+      ratingCount: s.ratings.length,
       parts: s.parts,
       materials: s.materialsJson ? JSON.parse(s.materialsJson) : {},
       homeworkText: s.homeworkText,
       homeworkRelated: s.homeworkRelated,
+      attachedTasks: s.taskUsages.filter((u) => !u.task.hidden).map((u) => ({ id: u.task.id, title: u.task.title })),
       previous: toSampleAdjacent(s.previousSampleLessonPlan),
       next: toSampleAdjacent(s.nextSampleLessonPlan),
     };
@@ -156,6 +182,8 @@ export async function getGalleryDetail(
       researchPlanEntry: { include: { teacher: { include: { user: true } } } },
       previousLessonPlan: { include: { researchPlanEntry: true } },
       nextLessonPlan: { include: { researchPlanEntry: true } },
+      taskUsages: { include: { task: true } },
+      ratings: true,
     },
   });
   if (!lp || !lp.publishedToGalleryAt || lp.researchPlanEntry.hidden) return null;
@@ -179,10 +207,13 @@ export async function getGalleryDetail(
     durationMin: lp.researchPlanEntry.durationMin,
     partsCount: lp.parts.length,
     publishedAt: lp.publishedToGalleryAt,
+    avgRating: average(lp.ratings.map((r) => r.value)),
+    ratingCount: lp.ratings.length,
     parts: lp.parts,
     materials: lp.materialsJson ? JSON.parse(lp.materialsJson) : {},
     homeworkText: lp.homeworkText,
     homeworkRelated: lp.homeworkRelated,
+    attachedTasks: lp.taskUsages.filter((u) => !u.task.hidden).map((u) => ({ id: u.task.id, title: u.task.title })),
     previous: toAdjacent(lp.previousLessonPlan),
     next: toAdjacent(lp.nextLessonPlan),
   };

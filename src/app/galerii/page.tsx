@@ -21,7 +21,7 @@ const SOURCE_TYPE_LABEL: Record<string, string> = {
   KATSETUND: 'Katsetund',
 };
 
-type SortField = 'gradeBand' | 'method' | 'author' | 'sourceType' | 'publishedAt';
+type SortField = 'gradeBand' | 'method' | 'author' | 'sourceType' | 'publishedAt' | 'avgRating';
 
 export default async function GaleriiPage(
   props: {
@@ -52,7 +52,7 @@ export default async function GaleriiPage(
     items = items.filter((i) => i.authorName.toLowerCase().includes(needle));
   }
 
-  const validSortFields: SortField[] = ['gradeBand', 'method', 'author', 'sourceType', 'publishedAt'];
+  const validSortFields: SortField[] = ['gradeBand', 'method', 'author', 'sourceType', 'publishedAt', 'avgRating'];
   const sortField: SortField = validSortFields.includes(searchParams.sort as SortField)
     ? (searchParams.sort as SortField)
     : 'publishedAt';
@@ -72,6 +72,9 @@ export default async function GaleriiPage(
         break;
       case 'sourceType':
         cmp = a.sourceType.localeCompare(b.sourceType);
+        break;
+      case 'avgRating':
+        cmp = (a.avgRating ?? -1) - (b.avgRating ?? -1);
         break;
       default:
         cmp = a.publishedAt.getTime() - b.publishedAt.getTime();
@@ -182,10 +185,15 @@ export default async function GaleriiPage(
                     Autor{sortIndicator('author')}
                   </a>
                 </th>
-                <th className="py-2 pr-2 text-right">Tunniosi</th>
+                <th className="py-2 pr-2 text-right">Kestus</th>
                 <th className="py-2 pr-2">
                   <a href={sortLink('publishedAt')} className="hover:text-slate-800 hover:underline">
                     Avaldatud{sortIndicator('publishedAt')}
+                  </a>
+                </th>
+                <th className="py-2 pr-2 text-right">
+                  <a href={sortLink('avgRating')} className="hover:text-slate-800 hover:underline">
+                    Hinnang{sortIndicator('avgRating')}
                   </a>
                 </th>
                 <th className="py-2 pr-2"></th>
@@ -214,8 +222,11 @@ export default async function GaleriiPage(
                   <td className="py-2 pr-2">
                     {item.authorName} <span className="text-slate-500">({item.authorRoleLabel})</span>
                   </td>
-                  <td className="py-2 pr-2 text-right">{item.partsCount}</td>
+                  <td className="py-2 pr-2 text-right">{item.durationMin ? `${item.durationMin} min` : '—'}</td>
                   <td className="py-2 pr-2">{item.publishedAt.toLocaleDateString('et-EE')}</td>
+                  <td className="py-2 pr-2 text-right">
+                    {item.avgRating !== null ? `${item.avgRating.toFixed(1)} (${item.ratingCount})` : '—'}
+                  </td>
                   <td className="py-2 pr-2">
                     <a href={detailHref(item)} className="text-brand-600 underline hover:no-underline">
                       Vaata

@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { getGalleryDetail, type GallerySourceType } from '@/lib/gallery';
 import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, type MaterialsAnswers } from '@/lib/lessonplan/types';
 import { PublicNav } from '@/components/PublicNav';
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/session';
 
 const METHOD_LABEL: Record<string, string> = {
   BOALER: 'Boaler',
@@ -20,6 +22,8 @@ const TYPE_PARAM_MAP: Record<string, GallerySourceType> = {
   katsetund: 'KATSETUND',
 };
 
+const RATING_VALUES = [1, 2, 3, 4, 5];
+
 export default async function GaleriiDetailPage(props: { params: Promise<{ type: string; id: string }> }) {
   const params = await props.params;
   const sourceType = TYPE_PARAM_MAP[params.type];
@@ -29,6 +33,23 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
   if (!detail) notFound();
 
   const materials: MaterialsAnswers = detail.materials;
+
+  const session = await getSession();
+  const canRate = Boolean(session.userId) && (session.role === 'OPETAJA' || session.role === 'TEADUR');
+  let ownRatingValue: number | null = null;
+  if (canRate) {
+    if (params.type === 'naidistund') {
+      const r = await prisma.sampleLessonPlanRating.findUnique({
+        where: { sampleLessonPlanId_userId: { sampleLessonPlanId: params.id, userId: session.userId! } },
+      });
+      ownRatingValue = r?.value ?? null;
+    } else {
+      const r = await prisma.lessonPlanRating.findUnique({
+        where: { lessonPlanId_userId: { lessonPlanId: params.id, userId: session.userId! } },
+      });
+      ownRatingValue = r?.value ?? null;
+    }
+  }
 
   return (
     <>
@@ -105,13 +126,28 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h2 className="font-semibold text-slate-900 mb-3">Kasutatav õppevara ja kodutöö</h2>
         <ul className="text-sm text-slate-700 space-y-1">
-          {MATERIAL_OPTIONS.filter((m) => m.key in materials).map((m) => (
+          {MATERIAL_OPTIONS.filter((m) => m.key in materials || (m.key === 'ulesanded' && detail.attachedTasks.length > 0)).map((m) => (
             <li key={m.key}>
               {m.label}
-              {materials[m.key] ? `: ${materials[m.key]}` : ''}
+              {materials[m.key]?.length ? `: ${materials[m.key].join(', ')}` : ''}
+              {m.key === 'ulesanded' && detail.attachedTasks.length > 0 && (
+                <>
+                  {materials[m.key]?.length ? ' · ' : ': '}
+                  {detail.attachedTasks.map((t, i) => (
+                    <span key={t.id}>
+                      {i > 0 && ', '}
+                      <a href={`/ulesanded/${t.id}`} className="text-brand-600 underline hover:no-underline">
+                        {t.title}
+                      </a>
+                    </span>
+                  ))}
+                </>
+              )}
             </li>
           ))}
-          {Object.keys(materials).length === 0 && <li className="text-slate-500">Õppevara pole märgitud.</li>}
+          {Object.keys(materials).length === 0 && detail.attachedTasks.length === 0 && (
+            <li className="text-slate-500">Õppevara pole märgitud.</li>
+          )}
         </ul>
         {detail.homeworkText && (
           <p className="text-sm text-slate-700 mt-3">
@@ -121,18 +157,34 @@ export default async function GaleriiDetailPage(props: { params: Promise<{ type:
         )}
       </div>
 
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h2 className="font-semibold text-slate-900 mb-3">Hinnang</h2>
+        <p className="text-sm text-slate-700 mb-3">
+          {detail.avgRating !== null
+            ? `${detail.avgRating.toFixed(1)} / 5 (${detail.ratingCount} hinnangut)`
+            : 'Hinnanguid pole veel'}
+        </p>
+        {canRate ? (
+          <form action={`/api/galerii/${params.type}/${params.id}/hinnang`} method="post" className="flex items-center gap-4">
+            <div className="flex gap-3">
+              {RATING_VALUES.map((v) => (
+                <label key={v} className="flex items-center gap-1 text-sm">
+                  <input type="radio" name="value" value={v} defaultChecked={ownRatingValue === v} required />
+                  {v}
+                </label>
+              ))}
+            </div>
+            <button className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700">
+              {ownRatingValue ? 'Uuenda hinnangut' : 'Salvesta hinnang'}
+            </button>
+          </form>
+        ) : (
+          <p className="text-xs text-slate-500">Hindamiseks pead olema sisse loginud õpetaja-uurija või teaduri kontoga.</p>
+        )}
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center gap-4">
-        <svg viewBox="0 0 80 28" className="h-8 w-auto flex-shrink-0" aria-hidden="true">
-          <rect width="80" height="28" rx="4" fill="#fff" stroke="#aab2ab" />
-          <circle cx="14" cy="14" r="10" fill="none" stroke="#000" strokeWidth="1.2" />
-          <text x="14" y="18" textAnchor="middle" fontSize="10" fontFamily="Georgia, serif" fill="#000">
-            cc
-          </text>
-          <circle cx="38" cy="14" r="10" fill="none" stroke="#000" strokeWidth="1.2" />
-          <text x="38" y="18" textAnchor="middle" fontSize="9" fontFamily="Georgia, serif" fill="#000">
-            BY
-          </text>
-        </svg>
+        <img src="/cc-by.svg" alt="Creative Commons CC BY 4.0" className="h-8 w-auto flex-shrink-0" />
         <p className="text-xs text-slate-600">
           See tunnikava on avaldatud litsentsiga{' '}
           <a

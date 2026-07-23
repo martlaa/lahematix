@@ -9,6 +9,7 @@ import {
   MAX_PARTS,
   LESSON_PART_TYPE_OPTIONS,
   MATERIAL_OPTIONS,
+  MATERIAL_ITEMS_PER_TYPE,
   type MaterialsAnswers,
 } from '@/lib/lessonplan/types';
 
@@ -434,27 +435,41 @@ export default async function OpetajaTunnikavaPage(
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-3">Kasutatav õppevara ja kodutöö</h2>
+          <h2 className="font-semibold text-slate-900 mb-1">Kasutatav õppevara ja kodutöö</h2>
+          <p className="text-xs text-slate-500 mb-3">
+            Igat tüüpi saab lisada mitu (nt mitu esitlust või mitu ülesannet) — tühjaks jäetud rida eemaldub
+            salvestamisel.
+          </p>
           <form action="/api/opetaja/tunnikava/lisainfo" method="post" className="space-y-3 text-sm">
             <input type="hidden" name="planEntryId" value={planEntry!.id} />
-            {MATERIAL_OPTIONS.map((m) => (
-              <div key={m.key} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name={`material.${m.key}`}
-                  defaultChecked={m.key in materials}
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                <span className="w-40 text-slate-700">{m.label}</span>
-                <input
-                  type="text"
-                  name={`materialLink.${m.key}`}
-                  defaultValue={materials[m.key] ?? ''}
-                  placeholder="Link / fail / lk-d"
-                  className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                />
-              </div>
-            ))}
+            {MATERIAL_OPTIONS.map((m) => {
+              const items = materials[m.key] ?? [];
+              return (
+                <div key={m.key} className="border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <input
+                      type="checkbox"
+                      name={`material.${m.key}`}
+                      defaultChecked={m.key in materials}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    <span className="w-40 text-slate-700">{m.label}</span>
+                  </div>
+                  <div className="pl-6 space-y-1">
+                    {Array.from({ length: MATERIAL_ITEMS_PER_TYPE }, (_, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        name={`materialLink.${m.key}.${i}`}
+                        defaultValue={items[i] ?? ''}
+                        placeholder={i === 0 ? 'Link / fail / lk-d' : 'Veel üks link / fail / lk-d'}
+                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
             <div className="pt-2 border-t border-slate-100">
               <label className="block text-sm font-medium text-slate-700 mb-1">Kodutöö lühikirjeldus</label>
               <textarea

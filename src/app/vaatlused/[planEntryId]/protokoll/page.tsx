@@ -121,10 +121,10 @@ export default async function VaatlusProtokollPage(props: { params: Promise<{ pl
                             />
                           </td>
                           <td className="py-1 pr-2">
-                            <input
-                              type="text"
+                            <textarea
                               name={`incident.${p.id}.${i}.description`}
                               defaultValue={row.description}
+                              rows={3}
                               className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
                             />
                           </td>
@@ -193,12 +193,12 @@ export default async function VaatlusProtokollPage(props: { params: Promise<{ pl
                                 ))}
                               </div>
                             </td>
-                            <td className="py-2 pr-2 w-56">
-                              <input
-                                type="text"
+                            <td className="py-2 pr-2 w-[28rem]">
+                              <textarea
                                 name={`note.${item.key}`}
                                 defaultValue={current?.note ?? ''}
                                 placeholder="Märkus / tõendus"
+                                rows={2}
                                 className="w-full rounded border border-slate-300 px-1 py-1 text-xs"
                               />
                             </td>

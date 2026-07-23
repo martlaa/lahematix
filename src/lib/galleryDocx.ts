@@ -119,7 +119,7 @@ export async function buildLessonPlanDocx(detail: GalleryDetail): Promise<Buffer
             ? materialsEntries.map(
                 (m) =>
                   new Paragraph({
-                    text: detail.materials[m.key] ? `${m.label}: ${detail.materials[m.key]}` : m.label,
+                    text: detail.materials[m.key]?.length ? `${m.label}: ${detail.materials[m.key].join(', ')}` : m.label,
                     numbering: { reference: 'materials-bullets', level: 0 },
                   }),
               )

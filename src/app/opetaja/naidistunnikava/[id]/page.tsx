@@ -87,7 +87,7 @@ export default async function NaidistunnikavaVaatePage(props: { params: Promise<
             {MATERIAL_OPTIONS.filter((m) => m.key in materials).map((m) => (
               <li key={m.key}>
                 {m.label}
-                {materials[m.key] ? `: ${materials[m.key]}` : ''}
+                {materials[m.key]?.length ? `: ${materials[m.key].join(', ')}` : ''}
               </li>
             ))}
             {Object.keys(materials).length === 0 && <li className="text-slate-500">Õppevara pole märgitud.</li>}

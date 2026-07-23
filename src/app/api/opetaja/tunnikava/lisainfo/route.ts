@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
-import { MATERIAL_OPTIONS } from '@/lib/lessonplan/types';
+import { MATERIAL_OPTIONS, MATERIAL_ITEMS_PER_TYPE, type MaterialsAnswers } from '@/lib/lessonplan/types';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -22,10 +22,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Rida ei leitud' }, { status: 404 });
   }
 
-  const materials: Record<string, string> = {};
+  const materials: MaterialsAnswers = {};
   for (const m of MATERIAL_OPTIONS) {
     if (form.get(`material.${m.key}`) === 'on') {
-      materials[m.key] = String(form.get(`materialLink.${m.key}`) ?? '').trim();
+      const items: string[] = [];
+      for (let i = 0; i < MATERIAL_ITEMS_PER_TYPE; i++) {
+        const value = String(form.get(`materialLink.${m.key}.${i}`) ?? '').trim();
+        if (value) items.push(value);
+      }
+      materials[m.key] = items;
     }
   }
 

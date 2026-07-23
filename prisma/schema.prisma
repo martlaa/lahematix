@@ -116,6 +116,8 @@ model User {
   appSettingsClosedBy   AppSettings[]
   tasks                 Task[]
   taskRatings           TaskRating[]
+  lessonPlanRatings       LessonPlanRating[]
+  sampleLessonPlanRatings SampleLessonPlanRating[]
 
   @@index([role])
 }
@@ -368,6 +370,7 @@ model LessonPlan {
   comments             LessonPlanComment[]
   observationProtocols ObservationProtocol[]
   taskUsages           TaskUsage[]
+  ratings              LessonPlanRating[]
 }
 
 model LessonPlanPart {
@@ -471,6 +474,7 @@ model SampleLessonPlan {
 
   parts       SampleLessonPlanPart[]
   taskUsages  SampleTaskUsage[]
+  ratings     SampleLessonPlanRating[]
 
   @@index([authorUserId])
 }
@@ -588,6 +592,36 @@ model TaskRating {
   updatedAt DateTime @updatedAt
 
   @@unique([taskId, userId])
+}
+
+// Tunnikava/näidistunnikava 1-5 hinnang galeriis — sama muster mis
+// TaskRating, aga eraldi mudel kummagi tunnikavatüübi jaoks (nagu
+// TaskUsage/SampleTaskUsage), kuna LessonPlan ja SampleLessonPlan on
+// eraldiseisvad mudelid. Üks hinnang kasutaja kohta, ümberhindamine lubatud.
+model LessonPlanRating {
+  id           String     @id @default(cuid())
+  lessonPlanId String
+  lessonPlan   LessonPlan @relation(fields: [lessonPlanId], references: [id])
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  value        Int // 1-5
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([lessonPlanId, userId])
+}
+
+model SampleLessonPlanRating {
+  id                 String           @id @default(cuid())
+  sampleLessonPlanId String
+  sampleLessonPlan   SampleLessonPlan @relation(fields: [sampleLessonPlanId], references: [id])
+  userId             String
+  user               User             @relation(fields: [userId], references: [id])
+  value              Int // 1-5
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([sampleLessonPlanId, userId])
 }
 
 // --- Andmete eluring (Faas 4 jätk): ekspordilubade taotlemine, andmete
