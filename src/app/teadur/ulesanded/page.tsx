@@ -10,7 +10,7 @@ export default async function TeadurUlesandedPage() {
 
   const tasks = await prisma.task.findMany({
     where: { authorUserId: session.userId },
-    include: { ratings: true, _count: { select: { usages: true } } },
+    include: { ratings: true, _count: { select: { usages: true, sampleUsages: true } } },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -126,7 +126,7 @@ export default async function TeadurUlesandedPage() {
                         <td className="py-2 pr-2">{t.gradeBand ?? '—'}</td>
                         <td className="py-2 pr-2">{t.topic ?? '—'}</td>
                         <td className="py-2 pr-2 text-right">{t.downloadCount}</td>
-                        <td className="py-2 pr-2 text-right">{t._count.usages}</td>
+                        <td className="py-2 pr-2 text-right">{t._count.usages + t._count.sampleUsages}</td>
                         <td className="py-2 pr-2 text-right">{avg !== null ? `${avg.toFixed(1)} (${t.ratings.length})` : '—'}</td>
                         <td className="py-2 pr-2">
                           {!t.hidden && (

@@ -39,7 +39,7 @@ function average(values: number[]): number | null {
 const ITEM_INCLUDE = {
   authorUser: true,
   ratings: true,
-  _count: { select: { usages: true } },
+  _count: { select: { usages: true, sampleUsages: true } },
 } as const;
 
 function toItem(task: {
@@ -54,7 +54,7 @@ function toItem(task: {
   worksheetUrl: string | null;
   downloadCount: number;
   ratings: { value: number }[];
-  _count: { usages: number };
+  _count: { usages: number; sampleUsages: number };
   createdAt: Date;
 }): TaskBankItem {
   return {
@@ -69,7 +69,9 @@ function toItem(task: {
     hasFile: Boolean(task.filePath),
     hasLink: Boolean(task.worksheetUrl),
     downloadCount: task.downloadCount,
-    usageCount: task._count.usages,
+    // "Tunnikavades" loeb kokku nii õpetajate tunnikavad (TaskUsage) kui
+    // teadurite näidistunnikavad (SampleTaskUsage) — mõlemad on tunnikavad.
+    usageCount: task._count.usages + task._count.sampleUsages,
     avgRating: average(task.ratings.map((r) => r.value)),
     ratingCount: task.ratings.length,
     createdAt: task.createdAt,

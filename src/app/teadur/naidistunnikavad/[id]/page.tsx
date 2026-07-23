@@ -1,5 +1,6 @@
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert } from '@/components/ui';
@@ -34,6 +35,7 @@ export default async function TeadurNaidistunnikavaPage(
       parts: { orderBy: { order: 'asc' } },
       previousSampleLessonPlan: true,
       nextSampleLessonPlan: true,
+      taskUsages: { include: { task: true }, orderBy: { createdAt: 'asc' } },
     },
   });
   if (!plan || plan.authorUserId !== session.userId) notFound();
@@ -48,6 +50,24 @@ export default async function TeadurNaidistunnikavaPage(
   const durationSum = parts.reduce((sum, p) => sum + p.durationMin, 0);
   const durationMismatch = plan.durationMin != null && parts.length > 0 && durationSum !== plan.durationMin;
   const materials: MaterialsAnswers = plan.materialsJson ? JSON.parse(plan.materialsJson) : {};
+
+  const attachedTaskIds = new Set(plan.taskUsages.map((u) => u.taskId));
+  let matchingTasks: Prisma.TaskGetPayload<{ include: { authorUser: true } }>[] = [];
+  if (plan.gradeBand) {
+    const taskCandidates = await prisma.task.findMany({
+      where: { hidden: false, gradeBand: plan.gradeBand },
+      include: { authorUser: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    const planTopic = (plan.topic ?? '').trim().toLowerCase();
+    matchingTasks = taskCandidates.filter((t) => {
+      if (attachedTaskIds.has(t.id)) return false;
+      const methodMatch = t.appliedMethods.some((m) => plan.appliedMethods.includes(m));
+      const taskTopic = (t.topic ?? '').trim().toLowerCase();
+      const topicMatch = Boolean(planTopic) && Boolean(taskTopic) && (planTopic.includes(taskTopic) || taskTopic.includes(planTopic));
+      return methodMatch || topicMatch;
+    });
+  }
 
   return (
     <>
@@ -389,6 +409,84 @@ export default async function TeadurNaidistunnikavaPage(
               Salvesta
             </button>
           </form>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+          <h2 className="font-semibold text-slate-900 mb-1">Ülesannete pank</h2>
+          <p className="text-xs text-slate-500 mb-3">
+            Lisa näidistunnikavasse ülesandeid ja töölehti avalikust{' '}
+            <a href="/ulesanded" className="text-brand-600 underline hover:no-underline">
+              ülesannete pangast
+            </a>
+            .
+          </p>
+
+          {plan.taskUsages.length > 0 && (
+            <table className="w-full text-sm mb-4">
+              <tbody>
+                {plan.taskUsages.map((u) => (
+                  <tr key={u.id} className="border-b border-slate-100">
+                    <td className="py-2 pr-2">{u.task.title}</td>
+                    <td className="py-2 pr-2">
+                      <a href={`/ulesanded/${u.task.id}`} className="text-brand-600 underline hover:no-underline">
+                        Vaata
+                      </a>
+                    </td>
+                    <td className="py-2">
+                      <form action="/api/teadur/naidistunnikava/ulesanne/eemalda" method="post">
+                        <input type="hidden" name="sampleLessonPlanId" value={plan.id} />
+                        <input type="hidden" name="taskId" value={u.task.id} />
+                        <button type="submit" className="text-red-600 underline hover:no-underline">
+                          Eemalda
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {matchingTasks.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Praegu ei leitud sinu vanuseastme/meetodi/teemaga sobivaid ülesandeid pangast.
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200">
+                  <th className="py-1 pr-2">Pealkiri</th>
+                  <th className="py-1 pr-2">Teema</th>
+                  <th className="py-1 pr-2">Autor</th>
+                  <th className="py-1 pr-2"></th>
+                  <th className="py-1 pr-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {matchingTasks.map((t) => (
+                  <tr key={t.id} className="border-b border-slate-100">
+                    <td className="py-2 pr-2">{t.title}</td>
+                    <td className="py-2 pr-2">{t.topic ?? '—'}</td>
+                    <td className="py-2 pr-2">{t.creditedAuthor ?? t.authorUser.name}</td>
+                    <td className="py-2 pr-2">
+                      <a href={`/ulesanded/${t.id}`} className="text-brand-600 underline hover:no-underline">
+                        Vaata
+                      </a>
+                    </td>
+                    <td className="py-2 pr-2">
+                      <form action="/api/teadur/naidistunnikava/ulesanne" method="post">
+                        <input type="hidden" name="sampleLessonPlanId" value={plan.id} />
+                        <input type="hidden" name="taskId" value={t.id} />
+                        <button type="submit" className="text-brand-600 underline hover:no-underline">
+                          Lisa tunnikavasse
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </main>
     </>

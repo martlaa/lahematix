@@ -469,7 +469,8 @@ model SampleLessonPlan {
   previousSampleLessonPlan   SampleLessonPlan? @relation("SampleLessonPlanSequence", fields: [previousSampleLessonPlanId], references: [id], onDelete: SetNull)
   nextSampleLessonPlan       SampleLessonPlan? @relation("SampleLessonPlanSequence")
 
-  parts SampleLessonPlanPart[]
+  parts       SampleLessonPlanPart[]
+  taskUsages  SampleTaskUsage[]
 
   @@index([authorUserId])
 }
@@ -542,8 +543,9 @@ model Task {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  usages  TaskUsage[]
-  ratings TaskRating[]
+  usages       TaskUsage[]
+  sampleUsages SampleTaskUsage[]
+  ratings      TaskRating[]
 
   @@index([authorUserId])
 }
@@ -558,6 +560,21 @@ model TaskUsage {
 
   @@unique([taskId, lessonPlanId])
   @@index([lessonPlanId])
+}
+
+// Ülesande kasutus teaduri NÄIDISTUNNIKAVAL (eraldi tabel TaskUsage'ist,
+// kuna näidistunnikavad on SampleLessonPlan, mitte LessonPlan — mõlemad
+// loevad kokku Task'i "Tunnikavades" populaarsuse näitaja, vt taskbank.ts).
+model SampleTaskUsage {
+  id                 String           @id @default(cuid())
+  taskId             String
+  task               Task             @relation(fields: [taskId], references: [id])
+  sampleLessonPlanId String
+  sampleLessonPlan   SampleLessonPlan @relation(fields: [sampleLessonPlanId], references: [id])
+  createdAt          DateTime         @default(now())
+
+  @@unique([taskId, sampleLessonPlanId])
+  @@index([sampleLessonPlanId])
 }
 
 model TaskRating {
