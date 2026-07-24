@@ -10,6 +10,9 @@ The app is built with **Next.js (App Router, server-side rendered)**,
 **PostgreSQL** and **Prisma**, and works **without client-side JavaScript** —
 every form and action runs as a plain HTML form backed by a server route.
 
+For the full requirements, phase-by-phase development plan and decision log,
+see [`ARENDUSPLAAN.md`](ARENDUSPLAAN.md) (Estonian).
+
 ## Tech stack
 
 | Layer | Technology |
@@ -119,8 +122,8 @@ uniquely-named fixtures (school, teacher, student) and cleans them up
 afterwards, so it's safe to run repeatedly against the same dev database.
 
 Test files live in `tests/e2e/`; this is a starting smoke-test set for the
-riskiest paths, not full coverage (see the development plan, Faas 7, for what's
-still missing — broader coverage, CI wiring, etc.).
+riskiest paths, not full coverage (see [`ARENDUSPLAAN.md`](ARENDUSPLAAN.md),
+Faas 7, for what's still missing — broader coverage, CI wiring, etc.).
 
 ## Environment variables
 
