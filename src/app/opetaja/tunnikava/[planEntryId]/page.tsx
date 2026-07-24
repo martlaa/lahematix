@@ -10,6 +10,7 @@ import {
   LESSON_PART_TYPE_OPTIONS,
   MATERIAL_OPTIONS,
   MATERIAL_ITEMS_PER_TYPE,
+  parseMaterials,
   type MaterialsAnswers,
 } from '@/lib/lessonplan/types';
 
@@ -65,9 +66,7 @@ export default async function OpetajaTunnikavaPage(
   const durationMismatch =
     planEntry!.durationMin != null && parts.length > 0 && durationSum !== planEntry!.durationMin;
 
-  const materials: MaterialsAnswers = planEntry!.lessonPlan?.materialsJson
-    ? JSON.parse(planEntry!.lessonPlan.materialsJson)
-    : {};
+  const materials: MaterialsAnswers = parseMaterials(planEntry!.lessonPlan?.materialsJson ?? null);
 
   let matchingSamples: Prisma.SampleLessonPlanGetPayload<{ include: { authorUser: true; parts: true } }>[] = [];
   if (teacher!.gradeBand) {

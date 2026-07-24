@@ -34,3 +34,23 @@ export type MaterialsAnswers = Record<string, string[]>;
 // vaba rida jäetakse salvestamisel kõrvale, seega tühjaks tegemine + Salvesta
 // eemaldabki selle kirje.
 export const MATERIAL_ITEMS_PER_TYPE = 4;
+
+// Enne mitme-kirje tuge salvestati materialsJson kujul { [key]: string } (üks
+// väärtus tüübi kohta). Olemasolevad (vanemad) read on DB-s ikka selles
+// vanas kujus — parseMaterials loeb mõlemat kuju turvaliselt, et vana sisu
+// avamine ei annaks runtime viga (materials[key].join is not a function).
+export function parseMaterials(materialsJson: string | null): MaterialsAnswers {
+  if (!materialsJson) return {};
+  const raw = JSON.parse(materialsJson) as Record<string, unknown>;
+  const result: MaterialsAnswers = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (Array.isArray(value)) {
+      result[key] = value.filter((v): v is string => typeof v === 'string');
+    } else if (typeof value === 'string') {
+      result[key] = value ? [value] : [];
+    } else {
+      result[key] = [];
+    }
+  }
+  return result;
+}

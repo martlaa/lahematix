@@ -10,6 +10,7 @@ import {
   LESSON_PART_TYPE_OPTIONS,
   MATERIAL_OPTIONS,
   MATERIAL_ITEMS_PER_TYPE,
+  parseMaterials,
   type MaterialsAnswers,
 } from '@/lib/lessonplan/types';
 
@@ -50,7 +51,7 @@ export default async function TeadurNaidistunnikavaPage(
   const parts = plan.parts;
   const durationSum = parts.reduce((sum, p) => sum + p.durationMin, 0);
   const durationMismatch = plan.durationMin != null && parts.length > 0 && durationSum !== plan.durationMin;
-  const materials: MaterialsAnswers = plan.materialsJson ? JSON.parse(plan.materialsJson) : {};
+  const materials: MaterialsAnswers = parseMaterials(plan.materialsJson);
 
   const attachedTaskIds = new Set(plan.taskUsages.map((u) => u.taskId));
   let matchingTasks: Prisma.TaskGetPayload<{ include: { authorUser: true } }>[] = [];

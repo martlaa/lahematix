@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import type { Method } from '@prisma/client';
+import { parseMaterials } from '@/lib/lessonplan/types';
 
 export type GallerySourceType = 'NAIDISTUND' | 'KATSETUND';
 
@@ -166,7 +167,7 @@ export async function getGalleryDetail(
       avgRating: average(s.ratings.map((r) => r.value)),
       ratingCount: s.ratings.length,
       parts: s.parts,
-      materials: s.materialsJson ? JSON.parse(s.materialsJson) : {},
+      materials: parseMaterials(s.materialsJson),
       homeworkText: s.homeworkText,
       homeworkRelated: s.homeworkRelated,
       attachedTasks: s.taskUsages.filter((u) => !u.task.hidden).map((u) => ({ id: u.task.id, title: u.task.title })),
@@ -210,7 +211,7 @@ export async function getGalleryDetail(
     avgRating: average(lp.ratings.map((r) => r.value)),
     ratingCount: lp.ratings.length,
     parts: lp.parts,
-    materials: lp.materialsJson ? JSON.parse(lp.materialsJson) : {},
+    materials: parseMaterials(lp.materialsJson),
     homeworkText: lp.homeworkText,
     homeworkRelated: lp.homeworkRelated,
     attachedTasks: lp.taskUsages.filter((u) => !u.task.hidden).map((u) => ({ id: u.task.id, title: u.task.title })),

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Alert } from '@/components/ui';
-import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, type MaterialsAnswers } from '@/lib/lessonplan/types';
+import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, parseMaterials, type MaterialsAnswers } from '@/lib/lessonplan/types';
 
 const METHOD_LABEL: Record<string, string> = {
   BOALER: 'Boaler',
@@ -51,7 +51,7 @@ export default async function VaatlusDetailPage(props: { params: Promise<{ planE
   const nextAdjacent = adjacent(entry.lessonPlan.nextLessonPlan);
 
   const lessonPlan = entry.lessonPlan;
-  const materials: MaterialsAnswers = lessonPlan.materialsJson ? JSON.parse(lessonPlan.materialsJson) : {};
+  const materials: MaterialsAnswers = parseMaterials(lessonPlan.materialsJson);
   const beforeComments = lessonPlan.comments.filter((c) => c.timing === 'ENNE');
   const afterComments = lessonPlan.comments.filter((c) => c.timing === 'JAREL');
 

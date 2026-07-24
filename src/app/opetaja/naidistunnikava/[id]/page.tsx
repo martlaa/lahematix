@@ -2,7 +2,7 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { redirect, notFound } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, type MaterialsAnswers } from '@/lib/lessonplan/types';
+import { LESSON_PART_TYPE_LABEL, MATERIAL_OPTIONS, parseMaterials, type MaterialsAnswers } from '@/lib/lessonplan/types';
 
 const METHOD_LABEL: Record<string, string> = {
   BOALER: 'Boaler',
@@ -27,7 +27,7 @@ export default async function NaidistunnikavaVaatePage(props: { params: Promise<
   });
   if (!plan || plan.hidden) notFound();
 
-  const materials: MaterialsAnswers = plan.materialsJson ? JSON.parse(plan.materialsJson) : {};
+  const materials: MaterialsAnswers = parseMaterials(plan.materialsJson);
 
   return (
     <>
